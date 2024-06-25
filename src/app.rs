@@ -152,6 +152,8 @@ pub struct App {
 
 impl LiveRegister for App {
     fn live_register(cx: &mut Cx) {
+        cx.live_registry.borrow_mut().package_root = Some("/app/share".to_string());
+
         makepad_widgets::live_design(cx);
 
         crate::shared::live_design(cx);

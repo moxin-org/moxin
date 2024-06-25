@@ -1,0 +1,55 @@
+{
+    "app-id": "rs.robius.moxin",
+    "runtime": "org.freedesktop.Platform",
+    "runtime-version": "23.08",
+    "sdk": "org.freedesktop.Sdk",
+    "command": "moxin",
+    "finish-args": [
+        "--share=ipc",
+        "--share=network",
+        "--device=dri",
+        "--socket=x11"
+    ],
+    "modules": [
+        {
+            "name": "moxin",
+            "buildsystem": "simple",
+            "build-commands": [
+                "install -Dm755 ./target/moxin -t /app/bin/"
+            ],
+            "sources": [
+                {
+                    "type": "dir",
+                    "path": "."
+                }
+            ]
+        },
+        {
+            "name": "resources",
+            "buildsystem": "simple",
+            "build-commands": [
+                "cp -R ./resources/. /app/share"
+            ],
+            "sources": [
+                {
+                    "type": "dir",
+                    "path": "."
+                }
+            ]
+        },
+        {
+            "name": "wasmedge",
+            "buildsystem": "simple",
+            "build-commands": [
+                "cp -R ./wasmedge/linux-x86_64/core/lib64/. /app/lib",
+                "cp -R ./wasmedge/linux-x86_64/wasinn/. /app/lib"
+            ],
+            "sources": [
+                {
+                    "type": "dir",
+                    "path": "."
+                }
+            ]
+        }
+    ]
+}
