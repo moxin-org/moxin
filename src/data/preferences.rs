@@ -18,7 +18,6 @@ pub struct Preferences {
 impl Preferences {
     pub fn load() -> Self {
             let preferences_path = preferences_path();
-            eprintln!("preferences_path {:?}", preferences_path);
 
             if let Ok(json) = read_from_file(preferences_path) {
                 if let Ok(mut preferences) = serde_json::from_str::<Preferences>(&json) {
@@ -39,9 +38,8 @@ impl Preferences {
 
     pub fn save(&self) {
         let json = serde_json::to_string(&self).unwrap();
-        eprintln!("json {:?}", json);
         match write_to_file(preferences_path(), &json) {
-            Ok(_) => eprintln!("Successfully wrote to the file."),
+            Ok(_) => (),
             Err(e) => eprintln!("Failed to write to the file: {:?}", e),
         }
     }

@@ -6,11 +6,12 @@ use crate::landing::model_card::{ModelCardViewAllModalWidgetRefExt, ViewAllModal
 use crate::landing::model_files_item::ModelFileItemAction;
 use crate::my_models::delete_model_modal::{DeleteModelAction, DeleteModelModalWidgetRefExt};
 use crate::my_models::model_info_modal::{ModelInfoAction, ModelInfoModalWidgetRefExt};
-use crate::shared::actions::{ChatAction, DownloadAction};
+use crate::shared::actions::{ChatAction, DownloadAction, TooltipAction};
 use crate::shared::download_notification_popup::{
     DownloadNotificationPopupWidgetRefExt, DownloadResult, PopupAction,
 };
-use crate::shared::portal::PortalWidgetRefExt;
+use crate::shared::portal::{PortalViewWidgetRefExt, PortalWidgetRefExt};
+use crate::shared::tooltip::TooltipWidgetRefExt;
 use makepad_widgets::*;
 
 live_design! {
@@ -141,7 +142,6 @@ live_design! {
                     }
 
                     tooltip_portal_view = <PortalView> {
-                        align: {x: 0.5, y: 0.5}
                         tooltip = <Tooltip> {}
                     }
                 }
@@ -301,6 +301,27 @@ impl MatchEvent for App {
             if let ChatAction::Resume = action.as_widget_action().cast() {
                 let chat_radio_button = self.ui.radio_button(id!(chat_tab));
                 chat_radio_button.select(cx, &mut Scope::empty());
+            }
+
+            match action.as_widget_action().cast() {
+                TooltipAction::Show(text, x, y) => {
+                    dbg!(&text, &x, &y);
+                    let mut tooltip = self.ui.tooltip(id!(tooltip));
+                    tooltip.set_text(&text);
+
+                    let tooltip_portal_view = self.ui.portal_view(id!(tooltip_portal_view));
+                    tooltip_portal_view.apply_over_and_redraw(cx, live!{
+                        padding: { left: (x), top: (y) }
+                    });
+                    
+                    let mut portal = self.ui.portal(id!(portal_root));
+                    let _ = portal.show_portal_view_by_id(cx, live_id!(tooltip_portal_view));
+                }
+                TooltipAction::Hide => {
+                    let mut portal = self.ui.portal(id!(portal_root));
+                    let _ = portal.close(cx);
+                }
+                _ => {}
             }
         }
     }

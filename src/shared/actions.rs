@@ -15,3 +15,10 @@ pub enum DownloadAction {
     Cancel(FileID),
     None,
 }
+
+#[derive(Clone, DefaultNone, Debug)]
+pub enum TooltipAction {
+    Show(String, f64, f64),
+    Hide,
+    None,
+}

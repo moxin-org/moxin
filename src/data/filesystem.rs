@@ -74,11 +74,9 @@ pub fn write_to_file(path: PathBuf, json: &str) -> Result<(), std::io::Error> {
     }
 
     // Create or overwrite the file
-    eprintln!("Creating or overwriting the file: {:?}", path);
     let mut file = File::create(path)?;
 
     // Write the JSON data to the file
-    eprintln!("Writing JSON data to the file.");
     file.write_all(json.as_bytes())?;
     Ok(())
 }
