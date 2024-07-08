@@ -110,10 +110,10 @@ impl Chats {
 
     pub fn set_current_chat(&mut self, chat_id: ChatID) {
         self.current_chat_id = Some(chat_id);
-        self.get_current_chat()
-            .unwrap()
-            .borrow_mut()
-            .touch_last_selected_at();
+
+        let mut chat = self.get_current_chat().unwrap().borrow_mut();
+        chat.touch_last_selected_at();
+        chat.save();
     }
 
     pub fn send_chat_message(&mut self, prompt: String) {
