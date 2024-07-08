@@ -105,13 +105,15 @@ impl Chats {
     }
 
     pub fn get_chat_by_id(&self, chat_id: ChatID) -> Option<&RefCell<Chat>> {
-        self.saved_chats
-                .iter()
-                .find(|c| c.borrow().id == chat_id)
+        self.saved_chats.iter().find(|c| c.borrow().id == chat_id)
     }
 
     pub fn set_current_chat(&mut self, chat_id: ChatID) {
         self.current_chat_id = Some(chat_id);
+        self.get_current_chat()
+            .unwrap()
+            .borrow_mut()
+            .touch_last_selected_at();
     }
 
     pub fn send_chat_message(&mut self, prompt: String) {
