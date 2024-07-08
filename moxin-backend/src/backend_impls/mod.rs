@@ -114,7 +114,7 @@ fn test_chat() {
     use moxin_protocol::open_ai::*;
 
     let home = std::env::var("HOME").unwrap();
-    let bk = BackendImpl::build_command_sender(
+    let bk = BackendImpl::<chat_ui::ChatBotModel>::build_command_sender(
         format!("{home}/ai/models"),
         format!("{home}/ai/models"),
         3,
@@ -189,7 +189,7 @@ fn test_chat_stop() {
     use moxin_protocol::open_ai::*;
 
     let home = std::env::var("HOME").unwrap();
-    let bk = BackendImpl::build_command_sender(
+    let bk = BackendImpl::<chat_ui::ChatBotModel>::build_command_sender(
         format!("{home}/ai/models"),
         format!("{home}/ai/models"),
         3,
@@ -277,7 +277,7 @@ fn test_chat_stop() {
 #[test]
 fn test_download_file() {
     let home = std::env::var("HOME").unwrap();
-    let bk = BackendImpl::build_command_sender(
+    let bk = BackendImpl::<chat_ui::ChatBotModel>::build_command_sender(
         format!("{home}/ai/models"),
         format!("{home}/ai/models"),
         3,
@@ -325,7 +325,7 @@ fn test_download_file() {
 #[test]
 fn test_get_download_file() {
     let home = std::env::var("HOME").unwrap();
-    let bk = BackendImpl::build_command_sender(
+    let bk = BackendImpl::<chat_ui::ChatBotModel>::build_command_sender(
         format!("{home}/ai/models"),
         format!("{home}/ai/models"),
         3,
@@ -345,7 +345,22 @@ pub enum DownloadControlCommand {
     Stop(FileID),
 }
 
-pub struct BackendImpl {
+pub type ChatModelBackend = BackendImpl<chat_ui::ChatBotModel>;
+
+pub trait BackendModel: Sized {
+    fn new_or_reload(
+        old_model: Option<Self>,
+        wasm_module: Module,
+        file: store::download_files::DownloadedFile,
+        options: LoadModelOptions,
+        tx: Sender<anyhow::Result<LoadModelResponse>>,
+    ) -> Self;
+    fn chat(&self, data: ChatRequestData, tx: Sender<anyhow::Result<ChatResponse>>) -> bool;
+    fn stop_chat(&self);
+    fn stop(self);
+}
+
+pub struct BackendImpl<Model: BackendModel> {
     sql_conn: Arc<Mutex<rusqlite::Connection>>,
     #[allow(unused)]
     app_data_dir: PathBuf,
@@ -356,14 +371,14 @@ pub struct BackendImpl {
         store::download_files::DownloadedFile,
         Sender<anyhow::Result<FileDownloadResponse>>,
     )>,
-    model: Option<chat_ui::Model>,
+    model: Option<Model>,
 
     #[allow(unused)]
     async_rt: tokio::runtime::Runtime,
     control_tx: tokio::sync::broadcast::Sender<DownloadControlCommand>,
 }
 
-impl BackendImpl {
+impl<Model: BackendModel + Send + 'static> BackendImpl<Model> {
     /// # Arguments
     /// * `app_data_dir` - The directory where application data should be stored.
     /// * `models_dir` - The directory where models should be downloaded.
@@ -592,7 +607,7 @@ impl BackendImpl {
                             nn_preload_file(&file);
                             let old_model = self.model.take();
 
-                            let model = chat_ui::Model::new_or_reload(
+                            let model = Model::new_or_reload(
                                 old_model,
                                 wasm_module.clone(),
                                 file,
@@ -634,7 +649,7 @@ impl BackendImpl {
     }
 
     fn run_loop(&mut self) {
-        static WASM: &[u8] = include_bytes!("../wasm/chat_ui.wasm");
+        static WASM: &[u8] = include_bytes!("../../wasm/chat_ui.wasm");
         let wasm_module = Module::from_bytes(None, WASM).unwrap();
 
         loop {
@@ -649,7 +664,7 @@ impl BackendImpl {
     }
 }
 
-pub fn nn_preload_file(file: &DownloadedFile) {
+pub fn nn_preload_file(file: &store::download_files::DownloadedFile) {
     let file_path = Path::new(&file.download_dir)
         .join(&file.model_id)
         .join(&file.name);

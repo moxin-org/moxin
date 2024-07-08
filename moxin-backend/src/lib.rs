@@ -18,7 +18,7 @@ impl Backend {
         models_dir: M,
         max_download_threads: usize,
     ) -> Backend {
-        let command_sender = backend_impls::BackendImpl::build_command_sender(
+        let command_sender = backend_impls::ChatModelBackend::build_command_sender(
             app_data_dir,
             models_dir,
             max_download_threads,

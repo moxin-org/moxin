@@ -24,7 +24,6 @@ impl Into<StopReason> for TokenError {
 use std::{
     collections::HashMap,
     io::Read,
-    path::Path,
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::{Receiver, Sender},
@@ -404,14 +403,14 @@ pub fn run_wasm_by_downloaded_file(
     log::debug!("wasm exit");
 }
 
-pub struct Model {
+pub struct ChatBotModel {
     pub model_tx: Sender<(ChatRequestData, Sender<anyhow::Result<ChatResponse>>)>,
     pub model_running_controller: Arc<AtomicBool>,
     pub model_thread: JoinHandle<()>,
 }
 
-impl Model {
-    pub fn new_or_reload(
+impl super::BackendModel for ChatBotModel {
+    fn new_or_reload(
         old_model: Option<Self>,
         wasm_module: Module,
         file: DownloadedFile,
@@ -446,16 +445,16 @@ impl Model {
         new_model
     }
 
-    pub fn chat(&self, data: ChatRequestData, tx: Sender<anyhow::Result<ChatResponse>>) -> bool {
+    fn chat(&self, data: ChatRequestData, tx: Sender<anyhow::Result<ChatResponse>>) -> bool {
         self.model_tx.send((data, tx)).is_ok()
     }
 
-    pub fn stop_chat(&self) {
+    fn stop_chat(&self) {
         self.model_running_controller
             .store(false, Ordering::Release);
     }
 
-    pub fn stop(self) {
+    fn stop(self) {
         let Self {
             model_tx,
             model_thread,
