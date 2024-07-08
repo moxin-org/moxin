@@ -44,10 +44,11 @@ impl Chats {
         }
     }
 
-    pub fn get_latest_chat_id(&mut self) -> Option<ChatID> {
+    pub fn get_last_selected_chat_id(&mut self) -> Option<ChatID> {
         self.saved_chats
-            .sort_by(|a, b| a.borrow().id.cmp(&b.borrow().id));
-        self.saved_chats.last().map(|c| c.borrow().id.clone())
+            .iter()
+            .max_by_key(|c| c.borrow().last_selected_at)
+            .map(|c| c.borrow().id)
     }
 
     pub fn load_model(&mut self, file: &File) -> Result<()> {
@@ -220,7 +221,7 @@ impl Chats {
 
         if let Some(current_chat_id) = self.current_chat_id {
             if current_chat_id == chat_id {
-                self.current_chat_id = self.get_latest_chat_id();
+                self.current_chat_id = self.get_last_selected_chat_id();
             }
         }
     }
