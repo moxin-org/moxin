@@ -44,7 +44,7 @@ impl Chats {
         }
     }
 
-    pub fn get_last_selected_chat_id(&mut self) -> Option<ChatID> {
+    pub fn get_last_selected_chat_id(&self) -> Option<ChatID> {
         self.saved_chats
             .iter()
             .max_by_key(|c| c.borrow().last_selected_at)
