@@ -50,8 +50,7 @@ struct ChatData {
     title: String,
     #[serde(default)]
     title_state: TitleState,
-    // Default for backwards compatibility.
-    #[serde(default = "chrono::Utc::now")]
+    #[serde(default)]
     last_selected_at: chrono::DateTime<chrono::Utc>,
 }
 
