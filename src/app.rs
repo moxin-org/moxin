@@ -23,6 +23,7 @@ live_design! {
     import crate::shared::modal::*;
     import crate::shared::widgets::SidebarMenuButton;
     import crate::shared::download_notification_popup::DownloadNotificationPopup;
+    import crate::shared::tooltip::Tooltip;
     import crate::landing::landing_screen::LandingScreen;
     import crate::landing::model_card::ModelCardViewAllModal;
     import crate::chat::chat_screen::ChatScreen;
@@ -137,6 +138,11 @@ live_design! {
                     popup_download_success_portal_view = <PortalView> {
                         align: {x: 1, y: 0}
                         popup_download_success = <DownloadNotificationPopup> {}
+                    }
+
+                    tooltip_portal_view = <PortalView> {
+                        align: {x: 0.5, y: 0.5}
+                        tooltip = <Tooltip> {}
                     }
                 }
             }

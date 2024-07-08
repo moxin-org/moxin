@@ -1,6 +1,6 @@
 use makepad_widgets::*;
 
-use crate::data::{chats::chat::ChatID, store::Store};
+use crate::{data::{chats::chat::ChatID, store::Store}, shared::portal::PortalAction};
 
 live_design! {
     import makepad_widgets::base::*;
@@ -214,6 +214,18 @@ impl Widget for ChatParams {
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
         self.view.handle_event(cx, event, scope);
         self.widget_match_event(cx, event, scope);
+
+        match event.hits(cx, self.view.area()) {
+            Hit::FingerHoverIn(_) => {
+                let widget_uid = self.widget_uid();
+                cx.widget_action(
+                    widget_uid,
+                    &scope.path,
+                    PortalAction::ShowPortalView(live_id!(tooltip_portal_view)),
+                );
+            }
+            _ => {}
+        }
 
         if self.animator_handle_event(cx, event).must_redraw() {
             self.redraw(cx);

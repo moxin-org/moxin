@@ -11,7 +11,6 @@ live_design! {
 
     ExternalLink = {{ExternalLink}} {
         width: Fit,
-        width: Fit,
         height: Fit,
         flow: Down,
         link = <LinkLabel> {

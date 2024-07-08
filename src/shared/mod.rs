@@ -7,6 +7,7 @@ pub mod portal;
 pub mod modal;
 pub mod resource_imports;
 pub mod styles;
+pub mod tooltip;
 pub mod utils;
 pub mod widgets;
 
@@ -18,4 +19,5 @@ pub fn live_design(cx: &mut Cx) {
     modal::live_design(cx);
     external_link::live_design(cx);
     download_notification_popup::live_design(cx);
+    tooltip::live_design(cx);
 }
