@@ -15,10 +15,10 @@ use moxin_protocol::{
         LocalServerResponse,
     },
 };
-use wasmedge_sdk::Module;
 
 use crate::store::{self, ModelFileDownloader, RemoteModel};
 
+mod api_server;
 mod chat_ui;
 
 #[derive(Clone, Debug)]
@@ -346,18 +346,24 @@ pub enum DownloadControlCommand {
 }
 
 pub type ChatModelBackend = BackendImpl<chat_ui::ChatBotModel>;
+pub type LlamaEdgeApiServerBackend = BackendImpl<api_server::LLamaEdgeApiServer>;
 
 pub trait BackendModel: Sized {
     fn new_or_reload(
+        async_rt: &tokio::runtime::Runtime,
         old_model: Option<Self>,
-        wasm_module: Module,
         file: store::download_files::DownloadedFile,
         options: LoadModelOptions,
         tx: Sender<anyhow::Result<LoadModelResponse>>,
     ) -> Self;
-    fn chat(&self, data: ChatRequestData, tx: Sender<anyhow::Result<ChatResponse>>) -> bool;
-    fn stop_chat(&self);
-    fn stop(self);
+    fn chat(
+        &self,
+        async_rt: &tokio::runtime::Runtime,
+        data: ChatRequestData,
+        tx: Sender<anyhow::Result<ChatResponse>>,
+    ) -> bool;
+    fn stop_chat(&self, async_rt: &tokio::runtime::Runtime);
+    fn stop(self, async_rt: &tokio::runtime::Runtime);
 }
 
 pub struct BackendImpl<Model: BackendModel> {
@@ -441,7 +447,7 @@ impl<Model: BackendModel + Send + 'static> BackendImpl<Model> {
         tx
     }
 
-    fn handle_command(&mut self, wasm_module: &Module, built_in_cmd: BuiltInCommand) {
+    fn handle_command(&mut self, built_in_cmd: BuiltInCommand) {
         match built_in_cmd {
             BuiltInCommand::Model(file) => match file {
                 ModelManagementCommand::GetFeaturedModels(tx) => {
@@ -607,13 +613,8 @@ impl<Model: BackendModel + Send + 'static> BackendImpl<Model> {
                             nn_preload_file(&file);
                             let old_model = self.model.take();
 
-                            let model = Model::new_or_reload(
-                                old_model,
-                                wasm_module.clone(),
-                                file,
-                                options,
-                                tx,
-                            );
+                            let model =
+                                Model::new_or_reload(&self.async_rt, old_model, file, options, tx);
                             self.model = Some(model);
                         }
                         Err(e) => {
@@ -623,19 +624,21 @@ impl<Model: BackendModel + Send + 'static> BackendImpl<Model> {
                 }
                 ModelInteractionCommand::EjectModel(tx) => {
                     if let Some(model) = self.model.take() {
-                        model.stop();
+                        model.stop(&self.async_rt);
                     }
                     let _ = tx.send(Ok(()));
                 }
                 ModelInteractionCommand::Chat(data, tx) => {
                     if let Some(model) = &self.model {
-                        model.chat(data, tx);
+                        model.chat(&self.async_rt, data, tx);
                     } else {
                         let _ = tx.send(Err(anyhow::anyhow!("Model not loaded")));
                     }
                 }
                 ModelInteractionCommand::StopChatCompletion(tx) => {
-                    self.model.as_ref().map(|model| model.stop_chat());
+                    self.model
+                        .as_ref()
+                        .map(|model| model.stop_chat(&self.async_rt));
                     let _ = tx.send(Ok(()));
                 }
                 ModelInteractionCommand::StartLocalServer(_, _) => todo!(),
@@ -649,12 +652,9 @@ impl<Model: BackendModel + Send + 'static> BackendImpl<Model> {
     }
 
     fn run_loop(&mut self) {
-        static WASM: &[u8] = include_bytes!("../../wasm/chat_ui.wasm");
-        let wasm_module = Module::from_bytes(None, WASM).unwrap();
-
         loop {
             if let Ok(cmd) = self.rx.recv() {
-                self.handle_command(&wasm_module, cmd.into());
+                self.handle_command(cmd.into());
             } else {
                 break;
             }

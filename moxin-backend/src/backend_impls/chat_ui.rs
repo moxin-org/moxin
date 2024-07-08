@@ -404,26 +404,54 @@ pub fn run_wasm_by_downloaded_file(
 }
 
 pub struct ChatBotModel {
+    id: String,
+    wasm_module: Module,
     pub model_tx: Sender<(ChatRequestData, Sender<anyhow::Result<ChatResponse>>)>,
     pub model_running_controller: Arc<AtomicBool>,
     pub model_thread: JoinHandle<()>,
 }
 
+static WASM: &[u8] = include_bytes!("../../wasm/chat_ui.wasm");
+
 impl super::BackendModel for ChatBotModel {
     fn new_or_reload(
+        async_rt: &tokio::runtime::Runtime,
         old_model: Option<Self>,
-        wasm_module: Module,
         file: DownloadedFile,
         options: LoadModelOptions,
         tx: Sender<anyhow::Result<LoadModelResponse>>,
     ) -> Self {
+        let mut need_reload = true;
+
+        let wasm_module = if let Some(old_model) = &old_model {
+            if old_model.id == file.id.as_str() {
+                need_reload = false;
+            }
+            old_model.wasm_module.clone()
+        } else {
+            Module::from_bytes(None, WASM).unwrap()
+        };
+
+        if !need_reload {
+            let _ = tx.send(Ok(LoadModelResponse::Completed(LoadedModelInfo {
+                file_id: file.id.to_string(),
+                model_id: file.model_id,
+                information: "".to_string(),
+            })));
+            return old_model.unwrap();
+        }
+
         let (model_tx, request_rx) = std::sync::mpsc::channel();
         let model_running_controller = Arc::new(AtomicBool::new(false));
         let model_running_controller_ = model_running_controller.clone();
 
+        let wasm_module_ = wasm_module.clone();
+
+        let file_id = file.id.to_string();
+
         let model_thread = std::thread::spawn(move || {
             run_wasm_by_downloaded_file(
-                wasm_module,
+                wasm_module_,
                 request_rx,
                 model_running_controller_,
                 file,
@@ -433,28 +461,35 @@ impl super::BackendModel for ChatBotModel {
         });
 
         let new_model = Self {
+            id: file_id,
             model_tx,
             model_thread,
             model_running_controller,
+            wasm_module,
         };
 
         if let Some(old_model) = old_model {
-            old_model.stop();
+            old_model.stop(async_rt);
         }
 
         new_model
     }
 
-    fn chat(&self, data: ChatRequestData, tx: Sender<anyhow::Result<ChatResponse>>) -> bool {
+    fn chat(
+        &self,
+        _async_rt: &tokio::runtime::Runtime,
+        data: ChatRequestData,
+        tx: Sender<anyhow::Result<ChatResponse>>,
+    ) -> bool {
         self.model_tx.send((data, tx)).is_ok()
     }
 
-    fn stop_chat(&self) {
+    fn stop_chat(&self, _async_rt: &tokio::runtime::Runtime) {
         self.model_running_controller
             .store(false, Ordering::Release);
     }
 
-    fn stop(self) {
+    fn stop(self, _async_rt: &tokio::runtime::Runtime) {
         let Self {
             model_tx,
             model_thread,
