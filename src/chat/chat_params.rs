@@ -111,7 +111,14 @@ live_design! {
                             text: "Stream"
                         }
                         <Filler> {}
-                        stream = <MoxinSwitch> {}
+                        stream = <MoxinSwitch> {
+                            // Match the default value to avoid the animation on start.
+                            animator: {
+                                selected = {
+                                    default: on
+                                }
+                            }
+                        }
                     }
 
                     max_tokens = <MoxinSlider> {
