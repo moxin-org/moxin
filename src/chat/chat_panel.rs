@@ -395,6 +395,7 @@ live_design! {
 
                     UserChatLine = <UserChatLine> {}
                     ModelChatLine = <ModelChatLine> {}
+                    EndOfChat = <View> {height: 0.1}
                 }
 
                 <JumpToButtom> {}
@@ -429,6 +430,9 @@ pub struct ChatPanel {
 
     #[rust]
     state: State,
+
+    #[rust]
+    portal_list_end_reached: bool,
 }
 
 impl Widget for ChatPanel {
@@ -567,7 +571,6 @@ impl WidgetMatchEvent for ChatPanel {
 impl ChatPanel {
     fn update_state(&mut self, scope: &mut Scope) {
         let store = scope.data.get_mut::<Store>().unwrap();
-        let list = self.portal_list(id!(chat));
 
         self.state = if store.downloads.downloaded_files.is_empty() {
             State::NoModelsAvailable
@@ -582,7 +585,7 @@ impl ChatPanel {
                         State::ModelSelectedWithEmptyChat
                     } else {
                         State::ModelSelectedWithChat {
-                            sticked_to_bottom: !list.further_items_bellow_exist()
+                            sticked_to_bottom: self.portal_list_end_reached
                                 || !matches!(self.state, State::ModelSelectedWithChat { .. }),
                             is_streaming: chat.borrow().is_streaming,
                         }
@@ -820,13 +823,20 @@ impl ChatPanel {
         }
     }
 
-    fn draw_messages(&self, cx: &mut Cx2d, scope: &mut Scope, list: &mut RefMut<PortalList>) {
+    fn draw_messages(&mut self, cx: &mut Cx2d, scope: &mut Scope, list: &mut RefMut<PortalList>) {
         let store = scope.data.get::<Store>().unwrap();
         let messages = get_chat_messages(store).unwrap();
         let messages_count = messages.len();
 
-        list.set_item_range(cx, 0, messages_count);
+        self.portal_list_end_reached = false;
+        list.set_item_range(cx, 0, messages_count + 1);
         while let Some(item_id) = list.next_visible_item(cx) {
+            if item_id == messages_count {
+                self.portal_list_end_reached = true;
+                let item = list.item(cx, item_id, live_id!(EndOfChat)).unwrap();
+                item.draw_all(cx, &mut Scope::empty());
+            }
+
             if item_id < messages_count {
                 let chat_line_data = &messages[item_id];
 
