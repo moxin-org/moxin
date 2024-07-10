@@ -304,14 +304,13 @@ impl MatchEvent for App {
             }
 
             match action.as_widget_action().cast() {
-                TooltipAction::Show(text, x, y) => {
-                    dbg!(&text, &x, &y);
+                TooltipAction::Show(text, pos) => {
                     let mut tooltip = self.ui.tooltip(id!(tooltip));
                     tooltip.set_text(&text);
 
                     let tooltip_portal_view = self.ui.portal_view(id!(tooltip_portal_view));
                     tooltip_portal_view.apply_over_and_redraw(cx, live!{
-                        padding: { left: (x), top: (y) }
+                        padding: { left: (pos.x), top: (pos.y) }
                     });
                     
                     let mut portal = self.ui.portal(id!(portal_root));

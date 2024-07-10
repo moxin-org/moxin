@@ -18,7 +18,7 @@ live_design! {
             width: Fit,
             height: Fit,
 
-            padding: 10,
+            padding: 16,
 
             draw_bg: {
                 color: #fff,
