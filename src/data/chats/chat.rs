@@ -7,7 +7,6 @@ use moxin_protocol::protocol::Command;
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
@@ -102,10 +101,7 @@ impl Chat {
         let (tx, rx) = channel();
 
         // Get Unix timestamp in ms for id.
-        let id = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("Couldn't get Unix timestamp, time went backwards")
-            .as_millis();
+        let id = chrono::Utc::now().timestamp_millis() as u128;
 
         Self {
             id,
