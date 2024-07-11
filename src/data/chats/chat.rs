@@ -50,7 +50,7 @@ struct ChatData {
     #[serde(default)]
     title_state: TitleState,
     #[serde(default)]
-    last_selected_at: chrono::DateTime<chrono::Utc>,
+    accessed_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Debug)]
@@ -88,7 +88,7 @@ pub struct Chat {
     pub messages_update_receiver: Receiver<ChatTokenArrivalAction>,
     pub is_streaming: bool,
     pub inferences_params: ChatInferenceParams,
-    pub last_selected_at: chrono::DateTime<chrono::Utc>,
+    pub accessed_at: chrono::DateTime<chrono::Utc>,
 
     title: String,
     title_state: TitleState,
@@ -114,7 +114,7 @@ impl Chat {
             title_state: TitleState::default(),
             chats_dir,
             inferences_params: ChatInferenceParams::default(),
-            last_selected_at: chrono::Utc::now(),
+            accessed_at: chrono::Utc::now(),
         }
     }
 
@@ -135,7 +135,7 @@ impl Chat {
                     messages_update_receiver: rx,
                     chats_dir,
                     inferences_params: ChatInferenceParams::default(),
-                    last_selected_at: data.last_selected_at,
+                    accessed_at: data.accessed_at,
                 };
                 Ok(chat)
             }
@@ -150,7 +150,7 @@ impl Chat {
             messages: self.messages.clone(),
             title: self.title.clone(),
             title_state: self.title_state,
-            last_selected_at: self.last_selected_at,
+            accessed_at: self.accessed_at,
         };
         let json = serde_json::to_string(&data).unwrap();
         let path = self.chats_dir.join(self.file_name());
@@ -346,7 +346,7 @@ impl Chat {
         self.messages.truncate(message_index);
     }
 
-    pub fn touch_last_selected_at(&mut self) {
-        self.last_selected_at = chrono::Utc::now();
+    pub fn update_accessed_at(&mut self) {
+        self.accessed_at = chrono::Utc::now();
     }
 }

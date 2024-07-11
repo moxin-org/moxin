@@ -47,7 +47,7 @@ impl Chats {
     pub fn get_last_selected_chat_id(&self) -> Option<ChatID> {
         self.saved_chats
             .iter()
-            .max_by_key(|c| c.borrow().last_selected_at)
+            .max_by_key(|c| c.borrow().accessed_at)
             .map(|c| c.borrow().id)
     }
 
@@ -113,7 +113,7 @@ impl Chats {
         self.current_chat_id = Some(chat_id);
 
         let mut chat = self.get_current_chat().unwrap().borrow_mut();
-        chat.touch_last_selected_at();
+        chat.update_accessed_at();
         chat.save();
     }
 
