@@ -831,12 +831,6 @@ impl ChatPanel {
         self.portal_list_end_reached = false;
         list.set_item_range(cx, 0, messages_count + 1);
         while let Some(item_id) = list.next_visible_item(cx) {
-            if item_id == messages_count {
-                self.portal_list_end_reached = true;
-                let item = list.item(cx, item_id, live_id!(EndOfChat)).unwrap();
-                item.draw_all(cx, &mut Scope::empty());
-            }
-
             if item_id < messages_count {
                 let chat_line_data = &messages[item_id];
 
@@ -874,6 +868,10 @@ impl ChatPanel {
                     chat_line_item.set_actions_enabled(cx, true);
                 }
 
+                item.draw_all(cx, &mut Scope::empty());
+            } else {
+                self.portal_list_end_reached = true;
+                let item = list.item(cx, item_id, live_id!(EndOfChat)).unwrap();
                 item.draw_all(cx, &mut Scope::empty());
             }
         }
