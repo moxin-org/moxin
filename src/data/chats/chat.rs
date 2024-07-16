@@ -88,6 +88,7 @@ pub struct Chat {
     pub messages_update_receiver: Receiver<ChatTokenArrivalAction>,
     pub is_streaming: bool,
     pub inferences_params: ChatInferenceParams,
+    pub system_prompt: Option<String>,
     pub accessed_at: chrono::DateTime<chrono::Utc>,
 
     title: String,
@@ -114,6 +115,7 @@ impl Chat {
             title_state: TitleState::default(),
             chats_dir,
             inferences_params: ChatInferenceParams::default(),
+            system_prompt: None,
             accessed_at: chrono::Utc::now(),
         }
     }
@@ -135,6 +137,7 @@ impl Chat {
                     messages_update_receiver: rx,
                     chats_dir,
                     inferences_params: ChatInferenceParams::default(),
+                    system_prompt: None,
                     accessed_at: data.accessed_at,
                 };
                 Ok(chat)
@@ -217,6 +220,19 @@ impl Chat {
             role: Role::User,
             name: None,
         });
+
+        if let Some(system_prompt) = &self.system_prompt {
+            messages.insert(
+                0 as usize,
+                Message {
+                    content: system_prompt.clone(),
+                    role: Role::System,
+                    name: None,
+                }
+            );
+        }
+
+        dbg!(&messages);
 
         let ip = &self.inferences_params;
         let cmd = Command::Chat(

@@ -80,6 +80,42 @@ live_design! {
                         text_style: <BOLD_FONT>{font_size: 12}
                         color: #000
                     }
+                    text: "Chat configuration"
+                }
+
+                <View> {
+                    flow: Down
+                    height: Fit
+                    width: Fill
+                    spacing: 12
+                    padding: {left: 4}
+                    <Label> {
+                        draw_text: {
+                            text_style: <BOLD_FONT>{font_size: 10},
+                            color: #000
+                        }
+                        text: "System Prompt"
+                    }
+                    system_prompt = <MoxinTextInput> {
+                        width: Fill,
+                        empty_message: "Enter a system prompt"
+                        draw_bg: {
+                            radius: 5.0
+                            color: #fff
+                            border_width: 1.0,
+                            border_color: #D9D9D9,
+                        }
+                        draw_text: {
+                            text_style: {font_size: 10},
+                        }
+                    }
+                }
+
+                <Label> {
+                    draw_text: {
+                        text_style: <BOLD_FONT>{font_size: 12}
+                        color: #000
+                    }
                     text: "Inference Parameters"
                 }
 
@@ -243,12 +279,17 @@ impl Widget for ChatParams {
             let stop = self.text_input(id!(stop));
             let stream = self.check_box(id!(stream));
 
+            let system_prompt = self.text_input(id!(system_prompt));
+
             temperature.set_value(ip.temperature.into());
             top_p.set_value(ip.top_p.into());
             max_tokens.set_value(ip.max_tokens.into());
             frequency_penalty.set_value(ip.frequency_penalty.into());
             presence_penalty.set_value(ip.presence_penalty.into());
             stop.set_text(&ip.stop);
+
+            let system_prompt_value = chat.system_prompt.clone().unwrap_or_default();
+            system_prompt.set_text(&system_prompt_value);
 
             // Currently, `selected` and `set_selected` interact with the animator of
             // the widget to do what they do. To avoid some visual issues, we should not
@@ -320,6 +361,14 @@ impl WidgetMatchEvent for ChatParams {
 
             if let Some(value) = self.check_box(id!(stream)).changed(actions) {
                 ip.stream = value;
+            }
+
+            if let Some(value) = self.text_input(id!(system_prompt)).changed(&actions) {
+                if value.is_empty() {
+                    chat.system_prompt = None;
+                } else {
+                    chat.system_prompt = Some(value);
+                }
             }
         }
     }
