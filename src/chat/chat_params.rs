@@ -78,9 +78,9 @@ live_design! {
                 label = <Label> {
                     draw_text: {
                         text_style: <BOLD_FONT>{font_size: 12}
-                        color: #000
+                        color: #667085
                     }
-                    text: "Chat configuration"
+                    text: "Chat Settings"
                 }
 
                 <View> {
@@ -96,27 +96,43 @@ live_design! {
                         }
                         text: "System Prompt"
                     }
-                    system_prompt = <MoxinTextInput> {
+                    <RoundedView> {
                         width: Fill,
-                        empty_message: "Enter a system prompt"
+                        height: 90,
+                        show_bg: true
                         draw_bg: {
                             radius: 5.0
                             color: #fff
                             border_width: 1.0,
                             border_color: #D9D9D9,
                         }
-                        draw_text: {
-                            text_style: {font_size: 10},
+                        <ScrollYView> {
+                            margin: 1,
+                            width: Fill,
+                            height: Fill,
+                            system_prompt = <MoxinTextInput> {
+                                width: Fill,
+                                height: Fit,
+                                empty_message: "Enter a system prompt"
+                                draw_bg: {
+                                    radius: 0
+                                    color: #0000
+                                    border_width: 0
+                                }
+                                draw_text: {
+                                    text_style: {font_size: 10},
+                                }
+                            }
                         }
                     }
                 }
 
                 <Label> {
                     draw_text: {
-                        text_style: <BOLD_FONT>{font_size: 12}
-                        color: #000
+                        text_style: <BOLD_FONT>{font_size: 10}
+                        color: #667085
                     }
-                    text: "Inference Parameters"
+                    text: "INFERENCE PARAMETERS"
                 }
 
                 <View> {
