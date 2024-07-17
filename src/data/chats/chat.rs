@@ -232,8 +232,6 @@ impl Chat {
             );
         }
 
-        dbg!(&messages);
-
         let ip = &self.inferences_params;
         let cmd = Command::Chat(
             ChatRequestData {
