@@ -20,6 +20,22 @@ live_design! {
     ICON_CLOSE_PANEL = dep("crate://self/resources/icons/close_right_panel.svg")
     ICON_OPEN_PANEL = dep("crate://self/resources/icons/open_right_panel.svg")
 
+    ChatParamsTextInputWrapper = <RoundedView> {
+        width: Fill,
+        show_bg: true
+        draw_bg: {
+            radius: 5.0
+            color: #fff
+            border_width: 1.0,
+            border_color: #D9D9D9,
+        }
+        scrolled_content = <ScrollYView> {
+            margin: 1,
+            width: Fill,
+            height: Fill
+        }
+    }
+
     ChatParamsActions = <View> {
         height: Fit
         flow: Right
@@ -96,20 +112,9 @@ live_design! {
                         }
                         text: "System Prompt"
                     }
-                    <RoundedView> {
-                        width: Fill,
+                    <ChatParamsTextInputWrapper> {
                         height: 90,
-                        show_bg: true
-                        draw_bg: {
-                            radius: 5.0
-                            color: #fff
-                            border_width: 1.0,
-                            border_color: #D9D9D9,
-                        }
-                        <ScrollYView> {
-                            margin: 1,
-                            width: Fill,
-                            height: Fill,
+                        scrolled_content = {
                             system_prompt = <MoxinTextInput> {
                                 width: Fill,
                                 height: Fit,
@@ -197,20 +202,22 @@ live_design! {
                             }
                             text: "Stop"
                         }
-                        stop = <MoxinTextInput> {
-                            width: Fill,
-                            // TODO: This should be something like min-height, allowing
-                            // the text input to grow.
+                        <ChatParamsTextInputWrapper> {
                             height: 65,
-                            empty_message: ""
-                            draw_bg: {
-                                radius: 5.0
-                                color: #fff
-                                border_width: 1.0,
-                                border_color: #D9D9D9,
-                            }
-                            draw_text: {
-                                text_style: {font_size: 10},
+                            scrolled_content = {
+                                stop = <MoxinTextInput> {
+                                    width: Fill,
+                                    height: Fit,
+                                    empty_message: " "
+                                    draw_bg: {
+                                        radius: 0,
+                                        color: #0000,
+                                        border_width: 0,
+                                    }
+                                    draw_text: {
+                                        text_style: {font_size: 10},
+                                    }
+                                }
                             }
                         }
                     }
