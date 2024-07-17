@@ -2,7 +2,7 @@ use makepad_widgets::*;
 
 use crate::{
     data::{chats::chat::ChatID, store::Store},
-    shared::actions::TooltipAction,
+    shared::{actions::TooltipAction, toggle_panel::TogglePanel},
 };
 
 live_design! {
@@ -36,50 +36,8 @@ live_design! {
         }
     }
 
-    ChatParamsActions = <View> {
-        height: Fit
-        flow: Right
-
-        <View> {
-            width: Fill
-            height: Fit
-        }
-
-
-        close_panel_button = <MoxinButton> {
-            width: Fit,
-            height: Fit,
-            icon_walk: {width: 20, height: 20},
-            draw_icon: {
-                svg_file: (ICON_CLOSE_PANEL),
-                fn get_color(self) -> vec4 {
-                    return #475467;
-                }
-            }
-        }
-
-        open_panel_button = <MoxinButton> {
-            width: Fit,
-            height: Fit,
-            visible: false,
-            icon_walk: {width: 20, height: 20},
-            draw_icon: {
-                svg_file: (ICON_OPEN_PANEL),
-                fn get_color(self) -> vec4 {
-                    return #475467;
-                }
-            }
-        }
-    }
-
     ChatParams = {{ChatParams}} {
-        flow: Overlay,
-        width: Fit,
-        height: Fill,
-
-        main_content = <FadeView> {
-            width: 300
-            height: Fill
+        open_content = {
             <View> {
                 width: Fill
                 height: Fill
@@ -237,39 +195,52 @@ live_design! {
             }
         }
 
-        <ChatParamsActions> {
+        persistent_content = {
             padding: {top: 58, left: 25, right: 25}
-        }
+            width: Fill
 
-        animator: {
-            panel = {
-                default: show,
-                show = {
-                    redraw: true,
-                    from: {all: Forward {duration: 0.3}}
-                    ease: ExpDecay {d1: 0.80, d2: 0.97}
-                    apply: {main_content = { width: 300, draw_bg: {opacity: 1.0} }}
+            <View> {
+                width: Fill
+                height: Fit
+            }
+
+            close_panel_button = <MoxinButton> {
+                width: Fit,
+                height: Fit,
+                icon_walk: {width: 20, height: 20},
+                draw_icon: {
+                    svg_file: (ICON_CLOSE_PANEL),
+                    fn get_color(self) -> vec4 {
+                        return #475467;
+                    }
                 }
-                hide = {
-                    redraw: true,
-                    from: {all: Forward {duration: 0.3}}
-                    ease: ExpDecay {d1: 0.80, d2: 0.97}
-                    apply: {main_content = { width: 110, draw_bg: {opacity: 0.0} }}
+            }
+
+            open_panel_button = <MoxinButton> {
+                width: Fit,
+                height: Fit,
+                visible: false,
+                icon_walk: {width: 20, height: 20},
+                draw_icon: {
+                    svg_file: (ICON_OPEN_PANEL),
+                    fn get_color(self) -> vec4 {
+                        return #475467;
+                    }
                 }
             }
         }
     }
 }
 
-const TOOLTIP_OFFSET: DVec2 = DVec2 { x: -320.0, y: -30.0 };
+const TOOLTIP_OFFSET: DVec2 = DVec2 {
+    x: -320.0,
+    y: -30.0,
+};
 
 #[derive(Live, LiveHook, Widget)]
 pub struct ChatParams {
     #[deref]
-    view: View,
-
-    #[animator]
-    animator: Animator,
+    parent: TogglePanel,
 
     #[rust]
     current_chat_id: Option<ChatID>,
@@ -277,12 +248,8 @@ pub struct ChatParams {
 
 impl Widget for ChatParams {
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
-        self.view.handle_event(cx, event, scope);
+        self.parent.handle_event(cx, event, scope);
         self.widget_match_event(cx, event, scope);
-
-        if self.animator_handle_event(cx, event).must_redraw() {
-            self.redraw(cx);
-        }
     }
 
     fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, walk: Walk) -> DrawStep {
@@ -324,7 +291,7 @@ impl Widget for ChatParams {
             self.visible = false;
         }
 
-        self.view.draw_walk(cx, scope, walk)
+        self.parent.draw_walk(cx, scope, walk)
     }
 }
 
@@ -339,13 +306,13 @@ impl WidgetMatchEvent for ChatParams {
         if close.clicked(&actions) {
             close.set_visible(false);
             open.set_visible(true);
-            self.animator_play(cx, id!(panel.hide));
+            self.set_open(cx, false);
         }
 
         if open.clicked(&actions) {
             open.set_visible(false);
             close.set_visible(true);
-            self.animator_play(cx, id!(panel.show));
+            self.set_open(cx, true);
         }
 
         if let Some(chat) = store.chats.get_current_chat() {
@@ -399,7 +366,7 @@ impl WidgetMatchEvent for ChatParams {
 
 impl ChatParams {
     fn handle_tooltip_actions(&mut self, cx: &mut Cx, actions: &Actions, scope: &mut Scope) {
-        if self.animator.animator_in_state(cx, id!(panel.hide)) {
+        if !self.is_open(cx) {
             return;
         }
 

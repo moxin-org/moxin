@@ -7,7 +7,6 @@ live_design! {
     import makepad_widgets::theme_desktop_dark::*;
 
     import crate::shared::styles::*;
-    import crate::shared::toggle_panel::*;
     import crate::shared::widgets::MoxinButton;
     import makepad_draw::shader::std::*;
 
