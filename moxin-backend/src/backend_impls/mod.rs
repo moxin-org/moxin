@@ -525,6 +525,7 @@ impl<Model: BackendModel + Send + 'static> BackendImpl<Model> {
                             quantization: remote_file.quantization,
                             prompt_template: remote_model.prompt_template,
                             reverse_prompt: remote_model.reverse_prompt,
+                            context_size:remote_model.context_size,
                             downloaded: false,
                             file_size: 0,
                             download_dir: self.models_dir.to_string_lossy().to_string(),

@@ -6,10 +6,10 @@ use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 
 use chrono::{DateTime, Utc};
-use tokio::time::timeout;
-use std::time::Duration;
 use moxin_protocol::data::Model;
 use moxin_protocol::protocol::FileDownloadResponse;
+use std::time::Duration;
+use tokio::time::timeout;
 
 use crate::backend_impls::DownloadControlCommand;
 
@@ -42,6 +42,7 @@ pub struct RemoteModel {
     pub files: Vec<RemoteFile>,
     pub prompt_template: String,
     pub reverse_prompt: String,
+    pub context_size: u64,
     pub author: Author,
     pub like_count: u32,
     pub download_count: u32,
@@ -203,7 +204,7 @@ async fn download_file<P: AsRef<Path>>(
                             Err(_) => {}
                         }
                     }
-                },
+                }
                 None => {
                     // Download is complete
                     break;

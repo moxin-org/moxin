@@ -12,6 +12,7 @@ pub struct DownloadedFile {
     pub quantization: String,
     pub prompt_template: String,
     pub reverse_prompt: String,
+    pub context_size: u64,
     pub downloaded: bool,
     pub file_size: u64,
     pub download_dir: String,
@@ -26,9 +27,9 @@ impl DownloadedFile {
         conn.execute(
             "INSERT OR REPLACE INTO download_files (
                 id, model_id, name, size, quantization,
-                prompt_template, reverse_prompt,
+                prompt_template, reverse_prompt, context_size,
                 downloaded, file_size, download_dir, downloaded_at, tags, featured, sha256)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
             rusqlite::params![
                 self.id,
                 self.model_id,
@@ -37,6 +38,7 @@ impl DownloadedFile {
                 self.quantization,
                 self.prompt_template,
                 self.reverse_prompt,
+                self.context_size,
                 self.downloaded,
                 self.file_size,
                 self.download_dir,
@@ -69,27 +71,29 @@ impl DownloadedFile {
     }
 
     fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
-        let downloaded_at = chrono::DateTime::parse_from_rfc3339(&row.get::<_, String>(10)?)
-            .map(|s| s.to_utc())
-            .unwrap_or_default();
+        let downloaded_at =
+            chrono::DateTime::parse_from_rfc3339(&row.get::<_, String>("downloaded_at")?)
+                .map(|s| s.to_utc())
+                .unwrap_or_default();
 
-        let tags = serde_json::from_str(row.get::<_, String>(11)?.as_str()).unwrap_or_default();
+        let tags = serde_json::from_str(row.get::<_, String>("tags")?.as_str()).unwrap_or_default();
 
         Ok(DownloadedFile {
-            id: Arc::new(row.get(0)?),
-            model_id: row.get(1)?,
-            name: row.get(2)?,
-            size: row.get(3)?,
-            quantization: row.get(4)?,
-            prompt_template: row.get(5)?,
-            reverse_prompt: row.get(6)?,
-            downloaded: row.get(7)?,
-            file_size: row.get(8)?,
-            download_dir: row.get(9)?,
+            id: Arc::new(row.get("id")?),
+            model_id: row.get("model_id")?,
+            name: row.get("name")?,
+            size: row.get("size")?,
+            quantization: row.get("quantization")?,
+            prompt_template: row.get("prompt_template")?,
+            reverse_prompt: row.get("reverse_prompt")?,
+            context_size: row.get("context_size")?,
+            downloaded: row.get("downloaded")?,
+            file_size: row.get("file_size")?,
+            download_dir: row.get("download_dir")?,
             downloaded_at,
             tags,
-            featured: row.get(12)?,
-            sha256: row.get(13)?,
+            featured: row.get("featured")?,
+            sha256: row.get("sha256")?,
         })
     }
 
@@ -164,6 +168,24 @@ impl DownloadedFile {
     }
 }
 
+fn check_context_size(conn: &rusqlite::Connection) -> rusqlite::Result<()> {
+    let mut stmt = conn.prepare("PRAGMA table_info(download_files)")?;
+    let mut rows = stmt.query_map([], |row| {
+        let name: String = row.get(1)?;
+        Ok(name)
+    })?;
+
+    let check = rows.find(|row| matches!(row.as_deref(), Ok("context_size")));
+
+    if check.is_none() {
+        conn.execute(
+            "ALTER TABLE download_files ADD COLUMN context_size INT DEFAULT 1024",
+            [],
+        )?;
+    }
+    Ok(())
+}
+
 pub fn create_table_download_files(conn: &rusqlite::Connection) -> rusqlite::Result<()> {
     conn.execute_batch(
         "BEGIN;
@@ -175,6 +197,7 @@ pub fn create_table_download_files(conn: &rusqlite::Connection) -> rusqlite::Res
             quantization TEXT NOT NULL,
             prompt_template TEXT DEFAULT '',
             reverse_prompt TEXT DEFAULT '',
+            context_size INTEGER DEFAULT 1024,
             downloaded INTEGER DEFAULT 0,
             file_size UNSIGNED BIG INT DEFAULT 0,
             download_dir TEXT NOT NULL,
@@ -187,6 +210,8 @@ pub fn create_table_download_files(conn: &rusqlite::Connection) -> rusqlite::Res
         CREATE INDEX IF NOT EXISTS index_downloaded ON download_files (downloaded);
         COMMIT;",
     )?;
+
+    check_context_size(conn)?;
 
     Ok(())
 }
@@ -204,6 +229,7 @@ fn test_sql() {
         quantization: "test".to_string(),
         prompt_template: "test".to_string(),
         reverse_prompt: "test".to_string(),
+        context_size: 1024,
         downloaded: false,
         file_size: 1024,
         download_dir: "test".to_string(),
