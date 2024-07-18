@@ -43,11 +43,8 @@ fn create_wasi(
         moxin_protocol::protocol::GPULayers::Max => None,
     };
 
-    let batch_size = if load_model.n_batch > 0 {
-        Some(load_model.n_batch.to_string())
-    } else {
-        None
-    };
+    // Set n_batch to a fixed value of 128.
+    let batch_size = Some(format!("128"));
 
     let mut prompt_template = load_model.prompt_template.clone();
     if prompt_template.is_none() && !file.prompt_template.is_empty() {
