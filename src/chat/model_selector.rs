@@ -139,6 +139,39 @@ impl Widget for ModelSelector {
         self.view.handle_event(cx, event, scope);
         self.widget_match_event(cx, event, scope);
 
+        let store = scope.data.get::<Store>().unwrap();
+
+        if let Hit::FingerDown(fd) = event.hits_with_capture_overload(cx, self.view(id!(button)).area(), true) {
+            if no_options_to_display(store) {
+                return;
+            };
+            if fd.tap_count == 1 {
+                self.open = !self.open;
+
+                if self.open {
+                    let list = self.model_selector_list(id!(options.list_container.list));
+                    let height = list.get_height();
+                    if height > MAX_OPTIONS_HEIGHT {
+                        self.options_list_height = Some(MAX_OPTIONS_HEIGHT);
+                    } else {
+                        self.options_list_height = Some(height);
+                    }
+
+                    self.view(id!(options)).apply_over(
+                        cx,
+                        live! {
+                            height: Fit,
+                        },
+                    );
+
+                    self.animator_play(cx, id!(open.show));
+                } else {
+                    self.hide_animation_timer = cx.start_timeout(0.3);
+                    self.animator_play(cx, id!(open.hide));
+                }
+            }
+        }
+
         if self.hide_animation_timer.is_event(event).is_some() {
             // When closing animation is done, hide the wrapper element
             self.view(id!(options)).apply_over(cx, live! { height: 0 });
@@ -204,38 +237,38 @@ const MAX_OPTIONS_HEIGHT: f64 = 400.0;
 
 impl WidgetMatchEvent for ModelSelector {
     fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, scope: &mut Scope) {
-        let store = scope.data.get::<Store>().unwrap();
+        // let store = scope.data.get::<Store>().unwrap();
 
-        if let Some(fd) = self.view(id!(button)).finger_down(&actions) {
-            if no_options_to_display(store) {
-                return;
-            };
-            if fd.tap_count == 1 {
-                self.open = !self.open;
+        // if let Some(fd) = self.view(id!(button)).finger_down(&actions) {
+        //     if no_options_to_display(store) {
+        //         return;
+        //     };
+        //     if fd.tap_count == 1 {
+        //         self.open = !self.open;
 
-                if self.open {
-                    let list = self.model_selector_list(id!(options.list_container.list));
-                    let height = list.get_height();
-                    if height > MAX_OPTIONS_HEIGHT {
-                        self.options_list_height = Some(MAX_OPTIONS_HEIGHT);
-                    } else {
-                        self.options_list_height = Some(height);
-                    }
+        //         if self.open {
+        //             let list = self.model_selector_list(id!(options.list_container.list));
+        //             let height = list.get_height();
+        //             if height > MAX_OPTIONS_HEIGHT {
+        //                 self.options_list_height = Some(MAX_OPTIONS_HEIGHT);
+        //             } else {
+        //                 self.options_list_height = Some(height);
+        //             }
 
-                    self.view(id!(options)).apply_over(
-                        cx,
-                        live! {
-                            height: Fit,
-                        },
-                    );
+        //             self.view(id!(options)).apply_over(
+        //                 cx,
+        //                 live! {
+        //                     height: Fit,
+        //                 },
+        //             );
 
-                    self.animator_play(cx, id!(open.show));
-                } else {
-                    self.hide_animation_timer = cx.start_timeout(0.3);
-                    self.animator_play(cx, id!(open.hide));
-                }
-            }
-        }
+        //             self.animator_play(cx, id!(open.show));
+        //         } else {
+        //             self.hide_animation_timer = cx.start_timeout(0.3);
+        //             self.animator_play(cx, id!(open.hide));
+        //         }
+        //     }
+        // }
 
         for action in actions {
             match action.as_widget_action().cast() {

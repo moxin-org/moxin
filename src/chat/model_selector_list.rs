@@ -114,8 +114,9 @@ impl Widget for ModelSelectorList {
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
         let widget_uid = self.widget_uid();
         for (id, item) in self.items.iter_mut() {
-            let actions = cx.capture_actions(|cx| item.handle_event(cx, event, scope));
-            if let Some(fd) = item.as_view().finger_down(&actions) {
+            //let actions = cx.capture_actions(|cx| item.handle_event(cx, event, scope));
+            if let Hit::FingerDown(fd) = event.hits_with_capture_overload(cx, item.as_view().area(), true) {
+            //if let Some(fd) = item.as_view().finger_down(&actions) {
                 if fd.tap_count == 1 {
                     cx.widget_action(
                         widget_uid,
