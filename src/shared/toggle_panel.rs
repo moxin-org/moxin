@@ -80,24 +80,29 @@ pub struct TogglePanel {
 
 impl Widget for TogglePanel {
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
-        self.view.handle_event(cx, event, scope);
-
-        if self.animator_handle_event(cx, event).must_redraw() {
+        if !self.initialized {
+            self.initialized = true;
+            if self.is_open(cx) {
+                self.animator_panel_progress = 1.0;
+                self.apply_over(cx, live! {width: (self.open_size)});
+            } else {
+                self.animator_panel_progress = 0.0;
+                self.apply_over(cx, live! {width: (self.close_size)});
+            };
             self.redraw(cx);
         }
+
+        if self.animator_handle_event(cx, event).must_redraw() {
+            let size_range = self.open_size - self.close_size;
+            let size = self.close_size + size_range * self.animator_panel_progress;
+            self.apply_over(cx, live! {width: (size)});
+            self.redraw(cx);
+        }
+
+        self.view.handle_event(cx, event, scope);
     }
 
     fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, walk: Walk) -> DrawStep {
-        if !self.initialized {
-            self.initialized = true;
-            // Ensure the progress is consistent with the state of the animator.
-            self.animator_panel_progress = if self.is_open(cx) { 1.0 } else { 0.0 };
-        }
-
-        let size_range = self.open_size - self.close_size;
-        let size = self.close_size + size_range * self.animator_panel_progress;
-        self.apply_over(cx, live! {width: (size)});
-
         self.view.draw_walk(cx, scope, walk)
     }
 }
