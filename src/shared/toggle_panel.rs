@@ -51,6 +51,7 @@ live_design! {
     }
 }
 
+/// A toggable side panel that can be expanded and collapsed to a maximum and minimum size.
 #[derive(Live, Widget, LiveHook)]
 pub struct TogglePanel {
     #[deref]
@@ -75,10 +76,12 @@ impl Widget for TogglePanel {
 }
 
 impl TogglePanel {
+    /// Returns whether the panel is currently open.
     pub fn is_open(&self, cx: &Cx) -> bool {
         self.animator_in_state(cx, id!(panel.open))
     }
 
+    /// Sets whether the panel is open. Causes the panel to animate to the new state.
     pub fn set_open(&mut self, cx: &mut Cx, open: bool) {
         if open {
             self.animator_play(cx, id!(panel.open));
@@ -89,6 +92,7 @@ impl TogglePanel {
 }
 
 impl TogglePanelRef {
+    /// Calls `is_open` on it's inner.
     pub fn is_open(&self, cx: &Cx) -> bool {
         if let Some(inner) = self.borrow() {
             inner.is_open(cx)
@@ -97,6 +101,7 @@ impl TogglePanelRef {
         }
     }
 
+    /// Calls `set_open` on it's inner.
     pub fn set_open(&self, cx: &mut Cx, open: bool) {
         if let Some(mut inner) = self.borrow_mut() {
             inner.set_open(cx, open);
