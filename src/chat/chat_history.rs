@@ -18,6 +18,7 @@ live_design! {
     ICON_OPEN_PANEL = dep("crate://self/resources/icons/open_left_panel.svg")
 
     ChatHistory = {{ChatHistory}} {
+        open_size: 600
         open_content = {
             <View> {
                 width: Fill,

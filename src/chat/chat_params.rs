@@ -37,6 +37,7 @@ live_design! {
     }
 
     ChatParams = {{ChatParams}} {
+        open_size: 700
         open_content = {
             <View> {
                 width: Fill

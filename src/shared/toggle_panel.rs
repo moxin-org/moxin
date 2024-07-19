@@ -38,13 +38,13 @@ live_design! {
                     redraw: true,
                     from: {all: Forward {duration: 0.3}}
                     ease: ExpDecay {d1: 0.80, d2: 0.97}
-                    apply: {width: 300, open_content = { draw_bg: {opacity: 1.0} }}
+                    apply: {animator_panel_progress: 1.0, open_content = { draw_bg: {opacity: 1.0} }}
                 }
                 close = {
                     redraw: true,
                     from: {all: Forward {duration: 0.3}}
                     ease: ExpDecay {d1: 0.80, d2: 0.97}
-                    apply: {width: 110, open_content = { draw_bg: {opacity: 0.0} }}
+                    apply: {animator_panel_progress: 0.0, open_content = { draw_bg: {opacity: 0.0} }}
                 }
             }
         }
@@ -56,6 +56,23 @@ live_design! {
 pub struct TogglePanel {
     #[deref]
     view: View,
+
+    /// Internal use only. Used by the animator to track the progress of the panel
+    /// animation to overcome some limitations (for ex: `apply_over` doesn't work well
+    /// over the animator).
+    #[live]
+    animator_panel_progress: f32,
+
+    /// The size of the panel when it is fully open.
+    #[live(300.0)]
+    open_size: f32,
+
+    /// The size of the panel when it is fully closed.
+    #[live(110.0)]
+    close_size: f32,
+
+    #[rust]
+    initialized: bool,
 
     #[animator]
     animator: Animator,
@@ -71,6 +88,16 @@ impl Widget for TogglePanel {
     }
 
     fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, walk: Walk) -> DrawStep {
+        if !self.initialized {
+            self.initialized = true;
+            // Ensure the progress is consistent with the state of the animator.
+            self.animator_panel_progress = if self.is_open(cx) { 1.0 } else { 0.0 };
+        }
+
+        let size_range = self.open_size - self.close_size;
+        let size = self.close_size + size_range * self.animator_panel_progress;
+        self.apply_over(cx, live! {width: (size)});
+
         self.view.draw_walk(cx, scope, walk)
     }
 }
