@@ -89,12 +89,12 @@ live_design! {
 #[derive(Live, LiveHook, Widget)]
 pub struct ChatHistory {
     #[deref]
-    parent: TogglePanel,
+    deref: TogglePanel,
 }
 
 impl Widget for ChatHistory {
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
-        self.parent.handle_event(cx, event, scope);
+        self.deref.handle_event(cx, event, scope);
         self.widget_match_event(cx, event, scope);
 
         // TODO This is a hack to redraw the chat history and reflect the
@@ -119,7 +119,7 @@ impl Widget for ChatHistory {
 
         let chats_count = chats.saved_chats.len();
 
-        while let Some(view_item) = self.parent.draw_walk(cx, scope, walk).step() {
+        while let Some(view_item) = self.deref.draw_walk(cx, scope, walk).step() {
             if let Some(mut list) = view_item.as_portal_list().borrow_mut() {
                 list.set_item_range(cx, 0, chats_count);
                 while let Some(item_id) = list.next_visible_item(cx) {
@@ -151,13 +151,13 @@ impl WidgetMatchEvent for ChatHistory {
         if self.button(id!(close_panel_button)).clicked(&actions) {
             self.button(id!(close_panel_button)).set_visible(false);
             self.button(id!(open_panel_button)).set_visible(true);
-            self.parent.set_open(cx, false);
+            self.deref.set_open(cx, false);
         }
 
         if self.button(id!(open_panel_button)).clicked(&actions) {
             self.button(id!(open_panel_button)).set_visible(false);
             self.button(id!(close_panel_button)).set_visible(true);
-            self.parent.set_open(cx, true);
+            self.deref.set_open(cx, true);
         }
     }
 }

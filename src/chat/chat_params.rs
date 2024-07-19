@@ -240,7 +240,7 @@ const TOOLTIP_OFFSET: DVec2 = DVec2 {
 #[derive(Live, LiveHook, Widget)]
 pub struct ChatParams {
     #[deref]
-    parent: TogglePanel,
+    deref: TogglePanel,
 
     #[rust]
     current_chat_id: Option<ChatID>,
@@ -248,7 +248,7 @@ pub struct ChatParams {
 
 impl Widget for ChatParams {
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
-        self.parent.handle_event(cx, event, scope);
+        self.deref.handle_event(cx, event, scope);
         self.widget_match_event(cx, event, scope);
     }
 
@@ -291,7 +291,7 @@ impl Widget for ChatParams {
             self.visible = false;
         }
 
-        self.parent.draw_walk(cx, scope, walk)
+        self.deref.draw_walk(cx, scope, walk)
     }
 }
 
