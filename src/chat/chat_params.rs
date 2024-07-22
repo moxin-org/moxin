@@ -37,7 +37,6 @@ live_design! {
     }
 
     ChatParams = {{ChatParams}} {
-        open_size: 700
         open_content = {
             <View> {
                 width: Fill
@@ -197,35 +196,18 @@ live_design! {
         }
 
         persistent_content = {
-            padding: {top: 58, left: 25, right: 25}
-            width: Fill
-
-            <View> {
-                width: Fill
-                height: Fit
-            }
-
-            close_panel_button = <MoxinButton> {
-                width: Fit,
-                height: Fit,
-                icon_walk: {width: 20, height: 20},
-                draw_icon: {
-                    svg_file: (ICON_CLOSE_PANEL),
-                    fn get_color(self) -> vec4 {
-                        return #475467;
+            default = {
+                before = {
+                    width: Fill
+                }
+                open = {
+                    draw_icon: {
+                        svg_file: (ICON_OPEN_PANEL),
                     }
                 }
-            }
-
-            open_panel_button = <MoxinButton> {
-                width: Fit,
-                height: Fit,
-                visible: false,
-                icon_walk: {width: 20, height: 20},
-                draw_icon: {
-                    svg_file: (ICON_OPEN_PANEL),
-                    fn get_color(self) -> vec4 {
-                        return #475467;
+                close = {
+                    draw_icon: {
+                        svg_file: (ICON_CLOSE_PANEL),
                     }
                 }
             }

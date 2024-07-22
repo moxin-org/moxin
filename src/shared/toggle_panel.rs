@@ -5,6 +5,9 @@ live_design! {
     import makepad_widgets::theme_desktop_dark::*;
     import makepad_draw::shader::std::*;
 
+    ICON_CLOSE_PANEL = dep("crate://self/resources/icons/close_left_panel.svg")
+    ICON_OPEN_PANEL = dep("crate://self/resources/icons/open_left_panel.svg")
+
     FadeView = <CachedView> {
         draw_bg: {
             instance opacity: 1.0
@@ -12,6 +15,101 @@ live_design! {
             fn pixel(self) -> vec4 {
                 let color = sample2d_rt(self.image, self.pos * self.scale + self.shift) + vec4(self.marked, 0.0, 0.0, 0.0);
                 return Pal::premul(vec4(color.xyz, color.w * self.opacity))
+            }
+        }
+    }
+
+    CustomButton = <Button> {
+        draw_bg: {
+            instance color: #0000
+            instance color_hover: #fff
+            instance border_width: 1.0
+            instance border_color: #0000
+            instance border_color_hover: #fff
+            instance radius: 2.5
+
+            fn get_color(self) -> vec4 {
+                return mix(self.color, mix(self.color, self.color_hover, 0.2), self.hover)
+            }
+
+            fn get_border_color(self) -> vec4 {
+                return mix(self.border_color, mix(self.border_color, self.border_color_hover, 0.2), self.hover)
+            }
+
+            fn pixel(self) -> vec4 {
+                let sdf = Sdf2d::viewport(self.pos * self.rect_size)
+                sdf.box(
+                    self.border_width,
+                    self.border_width,
+                    self.rect_size.x - (self.border_width * 2.0),
+                    self.rect_size.y - (self.border_width * 2.0),
+                    max(1.0, self.radius)
+                )
+                sdf.fill_keep(self.get_color())
+                if self.border_width > 0.0 {
+                    sdf.stroke(self.get_border_color(), self.border_width)
+                }
+                return sdf.result;
+            }
+        }
+
+        draw_icon: {
+            instance color: #fff
+            instance color_hover: #000
+            uniform rotation_angle: 0.0,
+
+            fn get_color(self) -> vec4 {
+                return mix(self.color, mix(self.color, self.color_hover, 0.2), self.hover)
+            }
+
+            // Support rotation of the icon
+            fn clip_and_transform_vertex(self, rect_pos: vec2, rect_size: vec2) -> vec4 {
+                let clipped: vec2 = clamp(
+                    self.geom_pos * rect_size + rect_pos,
+                    self.draw_clip.xy,
+                    self.draw_clip.zw
+                )
+                self.pos = (clipped - rect_pos) / rect_size
+
+                // Calculate the texture coordinates based on the rotation angle
+                let angle_rad = self.rotation_angle * 3.14159265359 / 180.0;
+                let cos_angle = cos(angle_rad);
+                let sin_angle = sin(angle_rad);
+                let rot_matrix = mat2(
+                    cos_angle, -sin_angle,
+                    sin_angle, cos_angle
+                );
+                self.tex_coord1 = mix(
+                    self.icon_t1.xy,
+                    self.icon_t2.xy,
+                    (rot_matrix * (self.pos.xy - vec2(0.5))) + vec2(0.5)
+                );
+
+                return self.camera_projection * (self.camera_view * (self.view_transform * vec4(
+                    clipped.x,
+                    clipped.y,
+                    self.draw_depth + self.draw_zbias,
+                    1.
+                )))
+            }
+        }
+        icon_walk: {width: 14, height: 14}
+
+        draw_text: {
+            text_style: <REGULAR_FONT>{font_size: 9},
+            fn get_color(self) -> vec4 {
+                return self.color;
+            }
+        }
+    }
+
+    ToggleButton = <CustomButton> {
+        width: Fit,
+        height: Fit,
+        icon_walk: {width: 20, height: 20},
+        draw_icon: {
+            fn get_color(self) -> vec4 {
+                return #475467;
             }
         }
     }
@@ -28,7 +126,38 @@ live_design! {
 
         persistent_content = <View> {
             height: Fit
-            width: Fit
+            width: Fill
+            default = <View> {
+                height: Fit,
+                width: Fill,
+                padding: {top: 58, left: 15, right: 15}
+                spacing: 10,
+
+                before = <View> {
+                    height: Fit,
+                    width: Fit,
+                    spacing: 10,
+                }
+
+                close = <ToggleButton> {
+                    draw_icon: {
+                        svg_file: (ICON_CLOSE_PANEL),
+                    }
+                }
+
+                open = <ToggleButton> {
+                    visible: false,
+                    draw_icon: {
+                        svg_file: (ICON_OPEN_PANEL),
+                    }
+                }
+
+                after = <View> {
+                    height: Fit,
+                    width: Fit,
+                    spacing: 10,
+                }
+            }
         }
 
         animator: {
@@ -97,6 +226,23 @@ impl Widget for TogglePanel {
             let size = self.close_size + size_range * self.animator_panel_progress;
             self.apply_over(cx, live! {width: (size)});
             self.redraw(cx);
+        }
+
+        if let Event::Actions(actions) = event {
+            let open = self.button(id!(open));
+            let close = self.button(id!(close));
+
+            if open.clicked(actions) {
+                open.set_visible(false);
+                close.set_visible(true);
+                self.set_open(cx, true);
+            }
+
+            if close.clicked(actions) {
+                close.set_visible(false);
+                open.set_visible(true);
+                self.set_open(cx, false);
+            }
         }
 
         self.view.handle_event(cx, event, scope);

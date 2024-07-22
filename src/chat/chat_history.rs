@@ -14,11 +14,8 @@ live_design! {
     import crate::chat::chat_history_card::ChatHistoryCard;
 
     ICON_NEW_CHAT = dep("crate://self/resources/icons/new_chat.svg")
-    ICON_CLOSE_PANEL = dep("crate://self/resources/icons/close_left_panel.svg")
-    ICON_OPEN_PANEL = dep("crate://self/resources/icons/open_left_panel.svg")
 
     ChatHistory = {{ChatHistory}} {
-        open_size: 600
         open_content = {
             <View> {
                 width: Fill,
@@ -43,42 +40,18 @@ live_design! {
         }
 
         persistent_content = {
-            padding: {top: 58, left: 25, right: 25}
-            spacing: 10,
-
-            close_panel_button = <MoxinButton> {
-                width: Fit,
-                height: Fit,
-                icon_walk: {width: 20, height: 20},
-                draw_icon: {
-                    svg_file: (ICON_CLOSE_PANEL),
-                    fn get_color(self) -> vec4 {
-                        return #475467;
-                    }
-                }
-            }
-
-            open_panel_button = <MoxinButton> {
-                width: Fit,
-                height: Fit,
-                visible: false,
-                icon_walk: {width: 20, height: 20},
-                draw_icon: {
-                    svg_file: (ICON_OPEN_PANEL),
-                    fn get_color(self) -> vec4 {
-                        return #475467;
-                    }
-                }
-            }
-
-            new_chat_button = <MoxinButton> {
-                width: Fit,
-                height: Fit,
-                icon_walk: {margin: { top: -1 }, width: 21, height: 21},
-                draw_icon: {
-                    svg_file: (ICON_NEW_CHAT),
-                    fn get_color(self) -> vec4 {
-                        return #475467;
+            default = {
+                after = {
+                    new_chat_button = <MoxinButton> {
+                        width: Fit,
+                        height: Fit,
+                        icon_walk: {margin: { top: -1 }, width: 21, height: 21},
+                        draw_icon: {
+                            svg_file: (ICON_NEW_CHAT),
+                            fn get_color(self) -> vec4 {
+                                return #475467;
+                            }
+                        }
                     }
                 }
             }
