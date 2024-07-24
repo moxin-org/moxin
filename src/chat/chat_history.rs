@@ -64,10 +64,33 @@ live_design! {
 pub struct ChatHistory {
     #[deref]
     deref: TogglePanel,
+
+    #[rust]
+    initialized: bool,
+}
+
+/// Represent a possible user config.
+struct UserSettings {
+    left_panel_size: f32,
+}
+
+impl UserSettings {
+    /// SImulate reading app settings from a config file.
+    pub fn read() -> Self {
+        Self {
+            left_panel_size: 700.0,
+        }
+    }
 }
 
 impl Widget for ChatHistory {
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
+        if !self.initialized {
+            self.initialized = true;
+            let UserSettings { left_panel_size } = UserSettings::read();
+            self.apply_over(cx, live! {open_size: (left_panel_size)});
+        }
+
         self.deref.handle_event(cx, event, scope);
         self.widget_match_event(cx, event, scope);
 
