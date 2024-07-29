@@ -216,7 +216,9 @@ impl LiveHook for TogglePanel {
 
 impl Widget for TogglePanel {
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
-        self.animator_handle_event(cx, event);
+        if self.animator_handle_event(cx, event).must_redraw() {
+            self.redraw(cx)
+        };
 
         if let Event::Actions(actions) = event {
             let open = self.button(id!(open));
