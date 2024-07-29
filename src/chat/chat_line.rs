@@ -341,17 +341,21 @@ impl ChatLine {
     }
 
     pub fn handle_editable_actions(&mut self, cx: &mut Cx, actions: &Actions, scope: &mut Scope) {
-        if self.button(id!(delete_button)).clicked(&actions) {
+        let delete_button = self.button(id!(delete_button));
+        if delete_button.clicked(&actions) {
             let widget_id = self.view.widget_uid();
             cx.widget_action(
                 widget_id,
                 &scope.path,
                 ChatLineAction::Delete(self.message_id),
             );
+            delete_button.reset_hover(cx);
         }
 
-        if self.button(id!(edit_button)).clicked(&actions) {
+        let edit_button = self.button(id!(edit_button));
+        if edit_button.clicked(&actions) {
             self.set_edit_mode(cx, true);
+            edit_button.reset_hover(cx);
         }
 
         if self.button(id!(copy_button)).clicked(&actions) {
@@ -361,7 +365,8 @@ impl ChatLine {
     }
 
     pub fn handle_on_edit_actions(&mut self, cx: &mut Cx, actions: &Actions, scope: &mut Scope) {
-        if self.button(id!(save)).clicked(&actions) {
+        let save_button = self.button(id!(save));
+        if save_button.clicked(&actions) {
             let updated_message = self.text_input(id!(input)).text();
 
             // Do not allow to have empty messages for now.
@@ -375,10 +380,12 @@ impl ChatLine {
                 );
             }
 
+            save_button.reset_hover(cx);
             self.set_edit_mode(cx, false);
         }
 
-        if self.button(id!(save_and_regenerate)).clicked(&actions) {
+        let save_and_regenerate_button = self.button(id!(save_and_regenerate));
+        if save_and_regenerate_button.clicked(&actions) {
             let updated_message = self.text_input(id!(input)).text();
 
             // TODO We should disable Save and Regenerate button when the message is empty.
@@ -391,10 +398,13 @@ impl ChatLine {
                 );
             }
 
+            save_and_regenerate_button.reset_hover(cx);
             self.set_edit_mode(cx, false);
         }
 
-        if self.button(id!(cancel)).clicked(&actions) {
+        let cancel_button = self.button(id!(cancel));
+        if cancel_button.clicked(&actions) {
+            cancel_button.reset_hover(cx);
             self.set_edit_mode(cx, false);
         }
     }

@@ -573,20 +573,20 @@ impl WidgetMatchEvent for ChatPanel {
             State::ModelSelectedWithChat {
                 is_streaming: true, ..
             } => {
-                if self
-                    .button(id!(main_prompt_input.prompt_stop_button))
-                    .clicked(actions)
+                let main_prompt_input_button = self.button(id!(main_prompt_input.prompt_send_button));
+                if main_prompt_input_button.clicked(actions)
                 {
+                    main_prompt_input_button.reset_hover(cx);
                     store.chats.cancel_chat_streaming();
                 }
             }
             _ => {}
         }
 
-        if self
-            .button(id!(no_downloaded_model.go_to_discover_button))
-            .clicked(actions)
+        let go_to_discover_button_button = self.button(id!(no_downloaded_model.go_to_discover_button));
+        if go_to_discover_button_button.clicked(actions)
         {
+            go_to_discover_button_button.reset_hover(cx);
             cx.widget_action(widget_uid, &scope.path, ChatPanelAction::NavigateToDiscover);
         }
     }
@@ -733,10 +733,9 @@ impl ChatPanel {
             self.redraw(cx);
         }
 
-        if self
-            .button(id!(main_prompt_input.prompt_send_button))
-            .clicked(&actions)
-        {
+        let prompt_send_button = self.button(id!(main_prompt_input.prompt_send_button));
+        if prompt_send_button.clicked(&actions) {
+            prompt_send_button.reset_hover(cx);
             self.send_message(cx, scope, prompt_input.text());
         }
 

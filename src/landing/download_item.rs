@@ -347,7 +347,8 @@ impl WidgetMatchEvent for DownloadItem {
                     widget_uid,
                     &scope.path,
                     DownloadAction::Play(file_id.clone()),
-                )
+                );
+                self.button(button_id).reset_hover(cx)
             }
         }
 
@@ -358,7 +359,8 @@ impl WidgetMatchEvent for DownloadItem {
                 widget_uid,
                 &scope.path,
                 DownloadAction::Pause(file_id.clone()),
-            )
+            );
+            self.button(id!(pause_button)).reset_hover(cx)
         }
 
         if self.button(id!(cancel_button)).clicked(&actions) {
@@ -368,7 +370,8 @@ impl WidgetMatchEvent for DownloadItem {
                 widget_uid,
                 &scope.path,
                 DownloadAction::Cancel(file_id.clone()),
-            )
+            );
+            self.button(id!(cancel_button)).reset_hover(cx)
         }
     }
 }

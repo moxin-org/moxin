@@ -286,7 +286,8 @@ impl WidgetMatchEvent for ChatHistoryCard {
         }
 
         let chat_options_wrapper_rect = self.view(id!(chat_options_wrapper)).area().rect(cx);
-        if self.button(id!(chat_options)).clicked(actions) {
+        let chat_options_button = self.button(id!(chat_options));
+        if chat_options_button.clicked(actions) {
             let cords = chat_options_wrapper_rect.pos;
             let cords = dvec2(cords.x, cords.y + chat_options_wrapper_rect.size.y);
 
@@ -301,6 +302,7 @@ impl WidgetMatchEvent for ChatHistoryCard {
                 PortalAction::ShowPortalView(live_id!(chat_history_card_options_portal_view)),
             );
 
+            chat_options_button.reset_hover(cx);
             return;
         }
 
@@ -371,7 +373,8 @@ impl ChatHistoryCard {
     fn handle_title_on_edit_actions(&mut self, cx: &mut Cx, actions: &Actions, scope: &mut Scope) {
         let store = scope.data.get_mut::<Store>().unwrap();
 
-        if self.button(id!(save)).clicked(actions) {
+        let save_button = self.button(id!(save));
+        if save_button.clicked(actions) {
             let updated_title = self.text_input(id!(title_input)).text();
             let chat = store
                 .chats
@@ -385,10 +388,13 @@ impl ChatHistoryCard {
                 chat.borrow().save();
             }
 
+            save_button.reset_hover(cx);
             self.transition_title_state(cx)
         }
 
-        if self.button(id!(cancel)).clicked(actions) {
+        let cancel_button = self.button(id!(cancel));
+        if cancel_button.clicked(actions) {
+            cancel_button.reset_hover(cx);
             self.transition_title_state(cx)
         }
     }

@@ -157,7 +157,8 @@ impl WidgetMatchEvent for ChatHistoryCardOptions {
     fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, scope: &mut Scope) {
         let widget_uid = self.widget_uid();
 
-        if self.button(id!(delete_chat)).clicked(actions) {
+        let delete_chat_button = self.button(id!(delete_chat));
+        if delete_chat_button.clicked(actions) {
             cx.widget_action(
                 widget_uid,
                 &scope.path,
@@ -168,15 +169,20 @@ impl WidgetMatchEvent for ChatHistoryCardOptions {
                 &scope.path,
                 PortalAction::ShowPortalView(live_id!(modal_delete_chat_portal_view)),
             );
+
+            delete_chat_button.reset_hover(cx)
         }
 
-        if self.button(id!(edit_chat_name)).clicked(actions) {
+        let edit_chat_name_button = self.button(id!(edit_chat_name));
+        if edit_chat_name_button.clicked(actions) {
             cx.widget_action(
                 widget_uid,
                 &scope.path,
                 ChatHistoryCardAction::ActivateTitleEdition(self.chat_id),
             );
             cx.widget_action(widget_uid, &scope.path, PortalAction::Close);
+
+            edit_chat_name_button.reset_hover(cx)
         }
     }
 }
