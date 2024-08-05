@@ -1,31 +1,49 @@
-use std::{sync::mpsc::{channel, Receiver, Sender}, thread};
-use anyhow::Result;
 use makepad_widgets::SignalToUI;
 use moxin_backend::Backend;
-use moxin_protocol::{data::File, protocol::{Command, LoadModelOptions, LoadModelResponse}};
+use moxin_protocol::{
+    data::File,
+    protocol::{Command, LoadModelOptions, LoadModelResponse},
+};
+use std::{
+    sync::{mpsc::channel, Arc, Mutex},
+    thread,
+};
+
+/// All posible states in which the loader can be.
+#[derive(Debug, Default)]
+pub enum ModelLoaderStatus {
+    #[default]
+    Unloaded,
+    Loading,
+    Loaded,
+    Failed(anyhow::Error),
+}
 
 pub struct ModelLoader {
-    pub complete: bool,
-    pub file: File,
-    load_sender: Sender<Result<()>>,
-    load_receiver: Receiver<Result<()>>,
+    status: Arc<Mutex<ModelLoaderStatus>>,
+    file: Option<File>,
 }
 
 impl ModelLoader {
-    pub fn new(file: File) -> Self {
-        let (tx, rx) = channel();
+    pub fn new() -> Self {
         Self {
-            complete: false,
-            file,
-            load_sender: tx,
-            load_receiver: rx,
+            status: Default::default(),
+            file: None,
         }
     }
 
-    pub fn load_model(&self, backend: &Backend) {
+    pub fn load(&mut self, file: File, backend: &Backend) {
+        if self.is_loading() {
+            panic!("ModelLoader is already loading a model");
+        }
+
+        let file_id = file.id.clone();
+        self.file = Some(file);
+        *self.status.lock().unwrap() = ModelLoaderStatus::Loading;
+
         let (tx, rx) = channel();
         let cmd = Command::LoadModel(
-            self.file.id.clone(),
+            file_id,
             LoadModelOptions {
                 prompt_template: None,
                 gpu_layers: moxin_protocol::protocol::GPULayers::Max,
@@ -37,52 +55,68 @@ impl ModelLoader {
             },
             tx,
         );
-
-        let load_model_tx = self.load_sender.clone();
-
         backend.command_sender.send(cmd).unwrap();
 
+        let status = self.status.clone();
         thread::spawn(move || {
-            if let Ok(response) = rx.recv() {
+            let response = rx.recv();
+            let mut status_lock = status.lock().unwrap();
+
+            if let Ok(response) = response {
                 match response {
                     Ok(LoadModelResponse::Completed(_)) => {
-                        load_model_tx.send(Ok(())).unwrap();
+                        *status_lock = ModelLoaderStatus::Loaded;
                     }
                     Ok(_) => {
-                        eprintln!("Error loading model: Unexpected response");
-                        load_model_tx.send(
-                            Err(anyhow::anyhow!("Error loading model: Unexpected response"))
-                        ).unwrap();
+                        let msg = "Error loading model: Unexpected response";
+                        *status_lock = ModelLoaderStatus::Failed(anyhow::anyhow!("{}", msg));
+                        eprintln!("{}", msg);
                     }
                     Err(err) => {
-                        eprintln!("Error loading model: {:?}", err);
-                        load_model_tx.send(Err(err)).unwrap();
+                        eprintln!("Error loading model: {:?}", &err);
+                        *status_lock = ModelLoaderStatus::Failed(err);
                     }
                 }
             } else {
-                load_model_tx.send(
-                    Err(anyhow::anyhow!("Error loading model"))
-                ).unwrap();
+                *status_lock = ModelLoaderStatus::Failed(anyhow::anyhow!("Error loading model"));
             }
 
             SignalToUI::set_ui_signal();
         });
     }
 
-    pub fn check_load_response(&mut self) -> Result<()> {
-        for msg in self.load_receiver.try_iter() {
-            match msg {
-                Ok(_) => {
-                    self.complete = true;
-                    return Ok(())
-                }
-                Err(err) => {
-                    self.complete = true;
-                    return Err(err.into())
-                }
-            }
-        };
+    pub fn file(&self) -> Option<&File> {
+        self.file.as_ref()
+    }
 
-        Ok(())
+    pub fn read_status(&self, f: impl FnOnce(&ModelLoaderStatus)) {
+        f(&*self.status.lock().unwrap());
+    }
+
+    pub fn is_loaded(&self) -> bool {
+        matches!(*self.status.lock().unwrap(), ModelLoaderStatus::Loaded)
+    }
+
+    pub fn is_loading(&self) -> bool {
+        matches!(*self.status.lock().unwrap(), ModelLoaderStatus::Loading)
+    }
+
+    pub fn is_failed(&self) -> bool {
+        matches!(*self.status.lock().unwrap(), ModelLoaderStatus::Failed(_))
+    }
+
+    pub fn is_finished(&self) -> bool {
+        self.is_loaded() || self.is_failed()
+    }
+
+    pub fn is_pending(&self) -> bool {
+        !self.is_finished()
+    }
+
+    // TODO: Improve
+    pub fn block_until_finished(&self) {
+        while self.is_pending() {
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
     }
 }

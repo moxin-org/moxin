@@ -511,7 +511,7 @@ impl WidgetMatchEvent for ChatPanel {
             }
 
             if let ModelSelectorAction::Selected(downloaded_file) = action.cast() {
-                store.load_model(&downloaded_file.file);
+                store.load_model(downloaded_file.file);
                 self.redraw(cx)
             }
 
@@ -527,7 +527,7 @@ impl WidgetMatchEvent for ChatPanel {
 
                     store
                         .chats
-                        .create_empty_chat_and_load_file(&downloaded_file.file);
+                        .create_empty_chat_and_load_file(downloaded_file.file);
                 }
                 _ => {}
             }

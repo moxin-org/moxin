@@ -87,7 +87,7 @@ impl Store {
         store
     }
 
-    pub fn load_model(&mut self, file: &File) {
+    pub fn load_model(&mut self, file: File) {
         self.chats.load_model(file);
     }
 
@@ -121,7 +121,7 @@ impl Store {
                     .find(|df| df.file.id == *file_id)
                     .map(|df| df.file.clone())
                 {
-                    let _ = self.load_model(&file);
+                    self.load_model(file);
                 }
             }
         }
@@ -280,7 +280,7 @@ impl Store {
                     .find(|d| d.file.id == *file_id)
                     .map(|d| d.file.clone())
                 {
-                    let _ = self.load_model(&file);
+                    self.load_model(file);
                 }
             }
         }
