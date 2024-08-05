@@ -10,13 +10,13 @@ use std::{
 };
 
 /// All posible states in which the loader can be.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub enum ModelLoaderStatus {
     #[default]
     Unloaded,
     Loading,
     Loaded,
-    Failed(anyhow::Error),
+    Failed,
 }
 
 pub struct ModelLoader {
@@ -69,16 +69,17 @@ impl ModelLoader {
                     }
                     Ok(_) => {
                         let msg = "Error loading model: Unexpected response";
-                        *status_lock = ModelLoaderStatus::Failed(anyhow::anyhow!("{}", msg));
+                        *status_lock = ModelLoaderStatus::Failed;
                         eprintln!("{}", msg);
                     }
                     Err(err) => {
                         eprintln!("Error loading model: {:?}", &err);
-                        *status_lock = ModelLoaderStatus::Failed(err);
+                        *status_lock = ModelLoaderStatus::Failed;
                     }
                 }
             } else {
-                *status_lock = ModelLoaderStatus::Failed(anyhow::anyhow!("Error loading model"));
+                eprintln!("Error loading model: Internal communication error");
+                *status_lock = ModelLoaderStatus::Failed;
             }
 
             SignalToUI::set_ui_signal();
@@ -102,7 +103,7 @@ impl ModelLoader {
     }
 
     pub fn is_failed(&self) -> bool {
-        matches!(*self.status.lock().unwrap(), ModelLoaderStatus::Failed(_))
+        matches!(*self.status.lock().unwrap(), ModelLoaderStatus::Failed)
     }
 
     pub fn is_finished(&self) -> bool {
