@@ -602,7 +602,7 @@ impl ChatPanel {
         } else if store.chats.loaded_model.is_none() {
             State::NoModelSelected
         } else {
-            let is_loading = store.chats.get_currently_loading_model().is_some();
+            let is_loading = store.get_currently_loading_model().is_some();
 
             store.chats.get_current_chat().map_or(
                 State::ModelSelectedWithEmptyChat { is_loading },

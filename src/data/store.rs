@@ -92,7 +92,21 @@ impl Store {
     }
 
     fn update_load_model(&mut self) {
-        self.chats.update_load_model();
+        // self.chats.update_load_model();
+        if self.chats.model_loader.is_loaded() {
+            self.chats.loaded_model = self
+                .chats
+                .model_loader
+                .file_id()
+                .map(|id| {
+                    self.downloads
+                        .downloaded_files
+                        .iter()
+                        .find(|df| df.file.id == id)
+                        .map(|df| df.file.clone())
+                })
+                .flatten();
+        }
 
         if let Some(file) = &self.chats.loaded_model {
             self.preferences.set_current_chat_model(file.id.clone());
@@ -102,6 +116,20 @@ impl Store {
                 self.chats.create_empty_chat();
             }
         }
+    }
+
+    pub fn get_currently_loading_model(&self) -> Option<File> {
+        self.chats
+            .model_loader
+            .get_loading_file_id()
+            .map(|file_id| {
+                self.downloads
+                    .downloaded_files
+                    .iter()
+                    .find(|df| df.file.id == file_id)
+                    .map(|df| df.file.clone())
+                    .expect("File being loaded not known?")
+            })
     }
 
     pub fn select_chat(&mut self, chat_id: ChatID) {

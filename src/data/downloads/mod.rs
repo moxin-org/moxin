@@ -110,6 +110,24 @@ impl Downloads {
         );
     }
 
+    /// Get a known file. No matter it's status.
+    pub fn get_file(&self, file_id: &FileID) -> Option<&File> {
+        // Bet this should not be different things just because they have attached status specific data.
+
+        self.downloaded_files
+            .iter()
+            .find(|f| f.file.id == *file_id)
+            .map(|f| &f.file)
+            .or_else(|| {
+                self.pending_downloads
+                    .iter()
+                    .find(|d| d.file.id == *file_id)
+                    .map(|d| &d.file)
+            })
+        // probably unnecessary
+        // .or_else(|| self.current_downloads.get(file_id).map(|d| &d.file))
+    }
+
     pub fn pause_download_file(&mut self, file_id: &FileID) {
         let Some(current_download) = self.current_downloads.get(file_id) else {
             return;

@@ -50,17 +50,17 @@ impl Chats {
         let current_chat = self.get_current_chat()?.borrow();
         let current_chat_model_id = current_chat.last_used_file_id.as_ref()?;
 
-        let loading_model = self.get_currently_loading_model();
-        let loaded_model = self.loaded_model.as_ref();
+        let loading_model_id = self.model_loader.get_loading_file_id();
+        let loaded_model_id = self.loaded_model.as_ref().map(|m| m.id.clone());
 
-        if let Some(loading_model) = loading_model {
-            if loading_model.id == *current_chat_model_id {
+        if let Some(loading_model_id) = loading_model_id {
+            if loading_model_id == *current_chat_model_id {
                 return Some(ModelStatus::Loading);
             }
         }
 
-        if let Some(loaded_model) = loaded_model {
-            if loaded_model.id == *current_chat_model_id {
+        if let Some(loaded_model_id) = loaded_model_id {
+            if loaded_model_id == *current_chat_model_id {
                 return Some(ModelStatus::Loaded);
             }
         }
@@ -93,21 +93,7 @@ impl Chats {
         if self.model_loader.is_loading() {
             return;
         }
-        self.model_loader.load(file, self.backend.as_ref());
-    }
-
-    pub fn get_currently_loading_model(&self) -> Option<File> {
-        if self.model_loader.is_loading() {
-            return self.model_loader.file();
-        }
-
-        None
-    }
-
-    pub fn update_load_model(&mut self) {
-        if self.model_loader.is_loaded() {
-            self.loaded_model = self.model_loader.file();
-        }
+        self.model_loader.load(file.id, self.backend.as_ref());
     }
 
     pub fn get_current_chat_id(&self) -> Option<ChatID> {

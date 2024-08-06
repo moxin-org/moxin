@@ -1,7 +1,7 @@
 use makepad_widgets::SignalToUI;
 use moxin_backend::Backend;
 use moxin_protocol::{
-    data::File,
+    data::{File, FileID},
     protocol::{Command, LoadModelOptions, LoadModelResponse},
 };
 use std::{
@@ -25,7 +25,7 @@ pub enum ModelLoaderStatus {
 #[derive(Default)]
 struct ModelLoaderInner {
     status: ModelLoaderStatus,
-    file: Option<File>,
+    file_id: Option<FileID>,
 }
 
 /// Unit for handling the non-blocking loading of models across threads.
@@ -37,16 +37,16 @@ impl ModelLoader {
         Self::default()
     }
 
-    pub fn load(&mut self, file: File, backend: &Backend) -> Receiver<Result<(), ()>> {
+    pub fn load(&mut self, file_id: FileID, backend: &Backend) -> Receiver<Result<(), ()>> {
         if self.is_loading() {
             panic!("ModelLoader is already loading a model");
         }
 
         let mut outer_lock = self.0.lock().unwrap();
-        outer_lock.file = Some(file.clone());
+        outer_lock.file_id = Some(file_id.clone());
         outer_lock.status = ModelLoaderStatus::Loading;
 
-        let rx = dispatch_load_command(backend, file.id.clone());
+        let rx = dispatch_load_command(backend, file_id.clone());
         let inner = self.0.clone();
         let (load_tx, load_rx) = channel();
         thread::spawn(move || {
@@ -91,8 +91,8 @@ impl ModelLoader {
         load_rx
     }
 
-    pub fn file(&self) -> Option<File> {
-        self.0.lock().unwrap().file.clone()
+    pub fn file_id(&self) -> Option<FileID> {
+        self.0.lock().unwrap().file_id.clone()
     }
 
     pub fn status(&self) -> ModelLoaderStatus {
@@ -117,6 +117,16 @@ impl ModelLoader {
 
     pub fn is_pending(&self) -> bool {
         !self.is_finished()
+    }
+
+    /// Get the file id of the model that is currently being loaded.
+    /// Returns `None` if the model loader is not at a loading state.
+    pub fn get_loading_file_id(&self) -> Option<FileID> {
+        if self.is_loading() {
+            return self.file_id();
+        }
+
+        None
     }
 }
 
