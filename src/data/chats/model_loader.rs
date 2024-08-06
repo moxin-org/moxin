@@ -1,7 +1,6 @@
 use makepad_widgets::SignalToUI;
-use moxin_backend::Backend;
 use moxin_protocol::{
-    data::{File, FileID},
+    data::FileID,
     protocol::{Command, LoadModelOptions, LoadModelResponse},
 };
 use std::{
