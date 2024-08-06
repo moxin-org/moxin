@@ -276,8 +276,6 @@ impl Chat {
             content: prompt.clone(),
         });
 
-        self.last_used_file_id = Some(wanted_file.id.clone());
-
         self.messages.push(ChatMessage {
             id: next_id + 1,
             role: Role::Assistant,
@@ -289,7 +287,7 @@ impl Chat {
 
         let store_chat_tx = self.messages_update_sender.clone();
         let wanted_file = wanted_file.clone();
-        let mut command_sender = backend.command_sender.clone();
+        let command_sender = backend.command_sender.clone();
         thread::spawn(move || {
             if let Err(()) = model_loader
                 .load(wanted_file.id, command_sender.clone())
