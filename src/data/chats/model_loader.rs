@@ -5,7 +5,10 @@ use moxin_protocol::{
     protocol::{Command, LoadModelOptions, LoadModelResponse},
 };
 use std::{
-    sync::{mpsc::channel, Arc, Mutex},
+    sync::{
+        mpsc::{channel, Receiver},
+        Arc, Mutex,
+    },
     thread,
 };
 
@@ -19,91 +22,93 @@ pub enum ModelLoaderStatus {
     Failed,
 }
 
-pub struct ModelLoader {
-    status: Arc<Mutex<ModelLoaderStatus>>,
+#[derive(Default)]
+struct ModelLoaderInner {
+    status: ModelLoaderStatus,
     file: Option<File>,
 }
 
+/// Unit for handling the non-blocking loading of models across threads.
+#[derive(Clone, Default)]
+pub struct ModelLoader(Arc<Mutex<ModelLoaderInner>>);
+
 impl ModelLoader {
     pub fn new() -> Self {
-        Self {
-            status: Default::default(),
-            file: None,
-        }
+        Self::default()
     }
 
-    pub fn load(&mut self, file: File, backend: &Backend) {
+    pub fn load(&mut self, file: File, backend: &Backend) -> Receiver<Result<(), ()>> {
         if self.is_loading() {
             panic!("ModelLoader is already loading a model");
         }
 
-        let file_id = file.id.clone();
-        self.file = Some(file);
-        *self.status.lock().unwrap() = ModelLoaderStatus::Loading;
+        let mut outer_lock = self.0.lock().unwrap();
+        outer_lock.file = Some(file.clone());
+        outer_lock.status = ModelLoaderStatus::Loading;
 
-        let (tx, rx) = channel();
-        let cmd = Command::LoadModel(
-            file_id,
-            LoadModelOptions {
-                prompt_template: None,
-                gpu_layers: moxin_protocol::protocol::GPULayers::Max,
-                use_mlock: false,
-                rope_freq_scale: 0.0,
-                rope_freq_base: 0.0,
-                context_overflow_policy:
-                    moxin_protocol::protocol::ContextOverflowPolicy::StopAtLimit,
-            },
-            tx,
-        );
-        backend.command_sender.send(cmd).unwrap();
-
-        let status = self.status.clone();
+        let rx = dispatch_load_command(backend, file.id.clone());
+        let inner = self.0.clone();
+        let (load_tx, load_rx) = channel();
         thread::spawn(move || {
             let response = rx.recv();
-            let mut status_lock = status.lock().unwrap();
+            let mut inner_lock = inner.lock().unwrap();
 
             if let Ok(response) = response {
                 match response {
                     Ok(LoadModelResponse::Completed(_)) => {
-                        *status_lock = ModelLoaderStatus::Loaded;
+                        inner_lock.status = ModelLoaderStatus::Loaded;
                     }
                     Ok(_) => {
                         let msg = "Error loading model: Unexpected response";
-                        *status_lock = ModelLoaderStatus::Failed;
+                        inner_lock.status = ModelLoaderStatus::Failed;
                         eprintln!("{}", msg);
                     }
                     Err(err) => {
                         eprintln!("Error loading model: {:?}", &err);
-                        *status_lock = ModelLoaderStatus::Failed;
+                        inner_lock.status = ModelLoaderStatus::Failed;
                     }
                 }
             } else {
                 eprintln!("Error loading model: Internal communication error");
-                *status_lock = ModelLoaderStatus::Failed;
+                inner_lock.status = ModelLoaderStatus::Failed;
+            }
+
+            match inner_lock.status {
+                ModelLoaderStatus::Loaded => {
+                    let _ = load_tx.send(Ok(()));
+                }
+                ModelLoaderStatus::Failed => {
+                    let _ = load_tx.send(Err(()));
+                }
+                _ => {
+                    panic!("ModelLoader finished with unexpected status");
+                }
             }
 
             SignalToUI::set_ui_signal();
         });
+
+        load_rx
     }
 
-    pub fn file(&self) -> Option<&File> {
-        self.file.as_ref()
+    pub fn file(&self) -> Option<File> {
+        self.0.lock().unwrap().file.clone()
     }
 
-    pub fn read_status(&self, f: impl FnOnce(&ModelLoaderStatus)) {
-        f(&*self.status.lock().unwrap());
+    pub fn status(&self) -> ModelLoaderStatus {
+        self.0.lock().unwrap().status.clone()
     }
 
     pub fn is_loaded(&self) -> bool {
-        matches!(*self.status.lock().unwrap(), ModelLoaderStatus::Loaded)
+        matches!(self.status(), ModelLoaderStatus::Loaded)
     }
 
     pub fn is_loading(&self) -> bool {
-        matches!(*self.status.lock().unwrap(), ModelLoaderStatus::Loading)
+        matches!(self.status(), ModelLoaderStatus::Loading)
     }
 
     pub fn is_failed(&self) -> bool {
-        matches!(*self.status.lock().unwrap(), ModelLoaderStatus::Failed)
+        matches!(self.status(), ModelLoaderStatus::Failed)
     }
 
     pub fn is_finished(&self) -> bool {
@@ -113,11 +118,25 @@ impl ModelLoader {
     pub fn is_pending(&self) -> bool {
         !self.is_finished()
     }
+}
 
-    // TODO: Improve
-    pub fn block_until_finished(&self) {
-        while self.is_pending() {
-            std::thread::sleep(std::time::Duration::from_millis(100));
-        }
-    }
+fn dispatch_load_command(
+    backend: &Backend,
+    file_id: String,
+) -> Receiver<Result<LoadModelResponse, anyhow::Error>> {
+    let (tx, rx) = channel();
+    let cmd = Command::LoadModel(
+        file_id,
+        LoadModelOptions {
+            prompt_template: None,
+            gpu_layers: moxin_protocol::protocol::GPULayers::Max,
+            use_mlock: false,
+            rope_freq_scale: 0.0,
+            rope_freq_base: 0.0,
+            context_overflow_policy: moxin_protocol::protocol::ContextOverflowPolicy::StopAtLimit,
+        },
+        tx,
+    );
+    backend.command_sender.send(cmd).unwrap();
+    rx
 }

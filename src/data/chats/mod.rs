@@ -96,7 +96,7 @@ impl Chats {
         self.model_loader.load(file, self.backend.as_ref());
     }
 
-    pub fn get_currently_loading_model(&self) -> Option<&File> {
+    pub fn get_currently_loading_model(&self) -> Option<File> {
         if self.model_loader.is_loading() {
             return self.model_loader.file();
         }
@@ -106,7 +106,7 @@ impl Chats {
 
     pub fn update_load_model(&mut self) {
         if self.model_loader.is_loaded() {
-            self.loaded_model = self.model_loader.file().cloned();
+            self.loaded_model = self.model_loader.file();
         }
     }
 
