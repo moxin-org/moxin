@@ -6,7 +6,7 @@ use moxin_protocol::{
 };
 use std::{
     sync::{
-        mpsc::{channel, Receiver},
+        mpsc::{channel, Receiver, Sender},
         Arc, Mutex,
     },
     thread,
@@ -37,18 +37,30 @@ impl ModelLoader {
         Self::default()
     }
 
-    pub fn load(&mut self, file_id: FileID, backend: &Backend) -> Receiver<Result<(), ()>> {
+    pub fn load(
+        &mut self,
+        file_id: FileID,
+        command_sender: Sender<Command>,
+    ) -> Receiver<Result<(), ()>> {
         if self.is_loading() {
             panic!("ModelLoader is already loading a model");
+        }
+
+        let (load_tx, load_rx) = channel();
+
+        if let Some(prev_file_id) = self.file_id() {
+            if prev_file_id == file_id {
+                let _ = load_tx.send(Ok(()));
+                return load_rx;
+            }
         }
 
         let mut outer_lock = self.0.lock().unwrap();
         outer_lock.file_id = Some(file_id.clone());
         outer_lock.status = ModelLoaderStatus::Loading;
 
-        let rx = dispatch_load_command(backend, file_id.clone());
+        let rx = dispatch_load_command(command_sender, file_id.clone());
         let inner = self.0.clone();
-        let (load_tx, load_rx) = channel();
         thread::spawn(move || {
             let response = rx.recv();
             let mut inner_lock = inner.lock().unwrap();
@@ -131,7 +143,7 @@ impl ModelLoader {
 }
 
 fn dispatch_load_command(
-    backend: &Backend,
+    command_sender: Sender<Command>,
     file_id: String,
 ) -> Receiver<Result<LoadModelResponse, anyhow::Error>> {
     let (tx, rx) = channel();
@@ -147,6 +159,6 @@ fn dispatch_load_command(
         },
         tx,
     );
-    backend.command_sender.send(cmd).unwrap();
+    command_sender.send(cmd).unwrap();
     rx
 }

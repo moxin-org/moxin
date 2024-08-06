@@ -93,7 +93,8 @@ impl Chats {
         if self.model_loader.is_loading() {
             return;
         }
-        self.model_loader.load(file.id, self.backend.as_ref());
+        self.model_loader
+            .load(file.id, self.backend.command_sender.clone());
     }
 
     pub fn get_current_chat_id(&self) -> Option<ChatID> {

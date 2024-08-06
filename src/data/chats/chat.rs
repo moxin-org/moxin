@@ -209,7 +209,7 @@ impl Chat {
         &mut self,
         prompt: String,
         wanted_file: &File,
-        model_loader: ModelLoader,
+        mut model_loader: ModelLoader,
         backend: &Backend,
     ) {
         let (tx, rx) = channel();
@@ -285,42 +285,56 @@ impl Chat {
             content: "".to_string(),
         });
 
-        let store_chat_tx = self.messages_update_sender.clone();
-        backend.command_sender.send(cmd).unwrap();
         self.is_streaming = true;
-        thread::spawn(move || loop {
-            if let Ok(response) = rx.recv() {
-                match response {
-                    Ok(ChatResponse::ChatResponseChunk(data)) => {
-                        let mut is_done = false;
 
-                        let _ = store_chat_tx.send(ChatTokenArrivalAction::AppendDelta(
-                            data.choices[0].delta.content.clone(),
-                        ));
+        let store_chat_tx = self.messages_update_sender.clone();
+        let wanted_file = wanted_file.clone();
+        let mut command_sender = backend.command_sender.clone();
+        thread::spawn(move || {
+            if let Err(()) = model_loader
+                .load(wanted_file.id, command_sender.clone())
+                .recv()
+                .unwrap()
+            {
+                return;
+            }
 
-                        if let Some(_reason) = &data.choices[0].finish_reason {
-                            is_done = true;
-                            let _ = store_chat_tx.send(ChatTokenArrivalAction::StreamingDone);
+            command_sender.send(cmd).unwrap();
+
+            loop {
+                if let Ok(response) = rx.recv() {
+                    match response {
+                        Ok(ChatResponse::ChatResponseChunk(data)) => {
+                            let mut is_done = false;
+
+                            let _ = store_chat_tx.send(ChatTokenArrivalAction::AppendDelta(
+                                data.choices[0].delta.content.clone(),
+                            ));
+
+                            if let Some(_reason) = &data.choices[0].finish_reason {
+                                is_done = true;
+                                let _ = store_chat_tx.send(ChatTokenArrivalAction::StreamingDone);
+                            }
+
+                            SignalToUI::set_ui_signal();
+                            if is_done {
+                                break;
+                            }
                         }
-
-                        SignalToUI::set_ui_signal();
-                        if is_done {
+                        Ok(ChatResponse::ChatFinalResponseData(data)) => {
+                            let _ = store_chat_tx.send(ChatTokenArrivalAction::AppendDelta(
+                                data.choices[0].message.content.clone(),
+                            ));
+                            let _ = store_chat_tx.send(ChatTokenArrivalAction::StreamingDone);
+                            SignalToUI::set_ui_signal();
                             break;
                         }
+                        Err(err) => eprintln!("Error receiving response chunk: {:?}", err),
                     }
-                    Ok(ChatResponse::ChatFinalResponseData(data)) => {
-                        let _ = store_chat_tx.send(ChatTokenArrivalAction::AppendDelta(
-                            data.choices[0].message.content.clone(),
-                        ));
-                        let _ = store_chat_tx.send(ChatTokenArrivalAction::StreamingDone);
-                        SignalToUI::set_ui_signal();
-                        break;
-                    }
-                    Err(err) => eprintln!("Error receiving response chunk: {:?}", err),
-                }
-            } else {
-                break;
-            };
+                } else {
+                    break;
+                };
+            }
         });
 
         self.update_title_based_on_first_message();
