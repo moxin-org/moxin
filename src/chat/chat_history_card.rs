@@ -312,7 +312,7 @@ impl WidgetMatchEvent for ChatHistoryCard {
                     ChatHistoryCardAction::ChatSelected(self.chat_id),
                 );
                 let store = scope.data.get_mut::<Store>().unwrap();
-                store.select_chat(self.chat_id);
+                store.chats.set_current_chat(self.chat_id);
                 self.redraw(cx);
             }
         }

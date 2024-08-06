@@ -206,35 +206,6 @@ impl Store {
             })
     }
 
-    pub fn select_chat(&mut self, chat_id: ChatID) {
-        self.chats.set_current_chat(chat_id);
-
-        if let Some(file_id) = self.get_last_used_file_id_in_current_chat() {
-            if self
-                .chats
-                .loaded_model
-                .as_ref()
-                .map_or(true, |m| *m.id != file_id)
-            {
-                if let Some(file) = self
-                    .downloads
-                    .downloaded_files
-                    .iter()
-                    .find(|df| df.file.id == *file_id)
-                    .map(|df| df.file.clone())
-                {
-                    self.load_model(file);
-                }
-            }
-        }
-    }
-
-    pub fn get_last_used_file_id_in_current_chat(&self) -> Option<FileID> {
-        self.chats
-            .get_current_chat()
-            .map(|chat| chat.borrow().last_used_file_id.clone())?
-    }
-
     pub fn get_loaded_downloaded_file(&self) -> Option<DownloadedFile> {
         if let Some(file) = &self.chats.loaded_model {
             self.downloads
@@ -367,7 +338,7 @@ impl Store {
 
     fn init_current_chat(&mut self) {
         if let Some(chat_id) = self.chats.get_last_selected_chat_id() {
-            self.select_chat(chat_id);
+            self.chats.set_current_chat(chat_id);
         } else {
             self.chats.create_empty_chat();
         }
