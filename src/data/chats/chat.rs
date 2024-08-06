@@ -12,6 +12,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::data::filesystem::{read_from_file, write_to_file};
 
+use super::model_loader::ModelLoader;
+
 pub type ChatID = u128;
 
 #[derive(Clone, Debug)]
@@ -203,7 +205,13 @@ impl Chat {
             }
         }
     }
-    pub fn send_message_to_model(&mut self, prompt: String, loaded_file: &File, backend: &Backend) {
+    pub fn send_message_to_model(
+        &mut self,
+        prompt: String,
+        wanted_file: &File,
+        model_loader: ModelLoader,
+        backend: &Backend,
+    ) {
         let (tx, rx) = channel();
         let mut messages: Vec<_> = self
             .messages
@@ -228,7 +236,7 @@ impl Chat {
                     content: system_prompt.clone(),
                     role: Role::System,
                     name: None,
-                }
+                },
             );
         }
 
@@ -236,7 +244,7 @@ impl Chat {
         let cmd = Command::Chat(
             ChatRequestData {
                 messages,
-                model: loaded_file.name.clone(),
+                model: wanted_file.name.clone(),
                 frequency_penalty: Some(ip.frequency_penalty),
                 logprobs: None,
                 top_logprobs: None,
@@ -268,12 +276,12 @@ impl Chat {
             content: prompt.clone(),
         });
 
-        self.last_used_file_id = Some(loaded_file.id.clone());
+        self.last_used_file_id = Some(wanted_file.id.clone());
 
         self.messages.push(ChatMessage {
             id: next_id + 1,
             role: Role::Assistant,
-            username: Some(loaded_file.name.clone()),
+            username: Some(wanted_file.name.clone()),
             content: "".to_string(),
         });
 

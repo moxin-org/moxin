@@ -122,19 +122,6 @@ impl Chats {
         chat.save();
     }
 
-    pub fn send_chat_message(&mut self, prompt: String) {
-        let Some(loaded_model) = self.loaded_model.as_ref() else {
-            println!("Skip sending message because loaded model not found");
-            return;
-        };
-
-        if let Some(chat) = self.get_current_chat() {
-            chat.borrow_mut()
-                .send_message_to_model(prompt, loaded_model, self.backend.as_ref());
-            chat.borrow().save();
-        }
-    }
-
     pub fn cancel_chat_streaming(&mut self) {
         if let Some(chat) = self.get_current_chat() {
             chat.borrow_mut().cancel_streaming(self.backend.as_ref());
@@ -145,34 +132,6 @@ impl Chats {
         if let Some(chat) = self.get_current_chat() {
             chat.borrow_mut().delete_message(message_id);
             chat.borrow().save();
-        }
-    }
-
-    pub fn edit_chat_message(
-        &mut self,
-        message_id: usize,
-        updated_message: String,
-        regenerate: bool,
-    ) {
-        if let Some(chat) = &mut self.get_current_chat() {
-            let mut chat = chat.borrow_mut();
-            if regenerate {
-                if let Some(loaded_model) = self.loaded_model.as_ref() {
-                    if chat.is_streaming {
-                        chat.cancel_streaming(self.backend.as_ref());
-                    }
-
-                    chat.remove_messages_from(message_id);
-                    chat.send_message_to_model(
-                        updated_message,
-                        loaded_model,
-                        self.backend.as_ref(),
-                    );
-                }
-            } else {
-                chat.edit_message(message_id, updated_message);
-            }
-            chat.save();
         }
     }
 

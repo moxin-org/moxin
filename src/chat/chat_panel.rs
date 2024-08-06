@@ -538,7 +538,11 @@ impl WidgetMatchEvent for ChatPanel {
                     self.redraw(cx);
                 }
                 ChatLineAction::Edit(id, updated, regenerate) => {
-                    store.chats.edit_chat_message(id, updated, regenerate);
+                    if regenerate {
+                        store.edit_chat_message_regenerating(id, updated)
+                    } else {
+                        store.edit_chat_message(id, updated);
+                    }
                     self.redraw(cx);
                 }
                 _ => {}
@@ -762,7 +766,7 @@ impl ChatPanel {
             } | State::ModelSelectedWithEmptyChat { is_loading: false }
         ) {
             let store = scope.data.get_mut::<Store>().unwrap();
-            store.chats.send_chat_message(prompt.clone());
+            store.send_chat_message(prompt.clone());
 
             let prompt_input = self.text_input(id!(main_prompt_input.prompt));
             prompt_input.set_text_and_redraw(cx, "");
