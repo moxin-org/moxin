@@ -322,13 +322,14 @@ impl ModelSelector {
 
     fn update_selected_model_info(&mut self, cx: &mut Cx, store: &Store) {
         let is_loading = store.chats.model_loader.is_loading();
+        let loaded_file = store.chats.loaded_model.as_ref();
 
         let file = store
             .chats
             .get_current_chat()
             .and_then(|c| c.borrow().last_used_file_id.clone())
             .and_then(|file_id| store.downloads.get_file(&file_id).cloned())
-            .or_else(|| store.chats.loaded_model.clone());
+            .or_else(|| loaded_file.cloned());
 
         let model = file
             .as_ref()
@@ -354,6 +355,21 @@ impl ModelSelector {
             file_name.to_string()
         };
 
+        let is_loaded_file = match (file, loaded_file) {
+            (Some(f), Some(lf)) => f.id == lf.id,
+            (None, None) => true,
+            _ => false,
+        };
+
+        let text_enabled_color = hex_rgb_to_vec4_color(0x000000);
+        let text_disabled_color = hex_rgb_to_vec4_color(0x667085);
+
+        let text_color = if is_loaded_file {
+            text_enabled_color
+        } else {
+            text_disabled_color
+        };
+
         self.view(id!(choose)).apply_over(
             cx,
             live! {
@@ -365,10 +381,10 @@ impl ModelSelector {
             cx,
             live! {
                 visible: true
-                label = { text: (caption) }
-                architecture_tag = { visible: (is_architecture_visible), caption = { text: (architecture) }}
-                params_size_tag = { visible: (is_params_size_visible), caption = { text: (params_size) }}
-                file_size_tag = { visible: (is_file_size_visible), caption = { text: (file_size) }}
+                label = { text: (caption), draw_text: { color: (text_color) }}
+                architecture_tag = { visible: (is_architecture_visible), caption = { text: (architecture), draw_text: { color: (text_color) }}}
+                params_size_tag = { visible: (is_params_size_visible), caption = { text: (params_size), draw_text: { color: (text_color) }}}
+                file_size_tag = { visible: (is_file_size_visible), caption = { text: (file_size), draw_text: { color: (text_color) }}}
             },
         );
 
@@ -408,4 +424,16 @@ fn options_to_display(store: &Store) -> bool {
 
 fn no_active_model(store: &Store) -> bool {
     store.get_loaded_downloaded_file().is_none() && store.get_currently_loading_model().is_none()
+}
+
+fn rgb_to_vec4_color(r: u8, g: u8, b: u8) -> Vec4 {
+    vec4(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, 1.0)
+}
+
+fn hex_rgb_to_vec4_color(hex: u32) -> Vec4 {
+    let r = ((hex >> 16) & 0xFF) as u8;
+    let g = ((hex >> 8) & 0xFF) as u8;
+    let b = (hex & 0xFF) as u8;
+
+    rgb_to_vec4_color(r, g, b)
 }
