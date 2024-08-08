@@ -5,12 +5,11 @@ use crate::chat::chat_panel::ChatPanelAction;
 use crate::data::downloads::DownloadPendingNotification;
 use crate::data::store::*;
 use crate::landing::model_files_item::ModelFileItemAction;
-use crate::shared::actions::{ChatAction, DownloadAction, TooltipAction};
+use crate::shared::actions::{ChatAction, DownloadAction};
 use crate::shared::download_notification_popup::{
     DownloadNotificationPopupWidgetRefExt, DownloadResult, PopupAction,
 };
-use crate::shared::portal::{PortalAction, PortalViewWidgetRefExt, PortalWidgetRefExt};
-use crate::shared::tooltip::TooltipWidgetRefExt;
+use crate::shared::portal::{PortalAction, PortalWidgetRefExt};
 use makepad_widgets::*;
 
 live_design! {
@@ -23,7 +22,6 @@ live_design! {
     import crate::shared::modal::*;
     import crate::shared::widgets::SidebarMenuButton;
     import crate::shared::download_notification_popup::DownloadNotificationPopup;
-    import crate::shared::tooltip::Tooltip;
     import crate::shared::desktop_buttons::MoxinDesktopButton;
 
     import crate::landing::landing_screen::LandingScreen;
@@ -119,9 +117,9 @@ live_design! {
                         popup_download_success = <DownloadNotificationPopup> {}
                     }
 
-                    tooltip_portal_view = <PortalView> {
-                        tooltip = <Tooltip> {}
-                    }
+                    // tooltip_portal_view = <PortalView> {
+                    //     tooltip = <Tooltip> {}
+                    // }
 
                     chat_history_card_options_portal_view = <PortalView> {
                         chat_history_card_options = <ChatHistoryCardOptions> {}
@@ -254,28 +252,28 @@ impl MatchEvent for App {
                 chat_radio_button.select(cx, &mut Scope::empty());
             }
 
-            match action.as_widget_action().cast() {
-                TooltipAction::Show(text, pos) => {
-                    let mut tooltip = self.ui.tooltip(id!(tooltip));
-                    tooltip.set_text(&text);
+            // match action.as_widget_action().cast() {
+            //     TooltipAction::Show(text, pos) => {
+            //         let mut tooltip = self.ui.tooltip(id!(tooltip));
+            //         tooltip.set_text(&text);
 
-                    let tooltip_portal_view = self.ui.portal_view(id!(tooltip_portal_view));
-                    tooltip_portal_view.apply_over_and_redraw(
-                        cx,
-                        live! {
-                            padding: { left: (pos.x), top: (pos.y) }
-                        },
-                    );
+            //         let tooltip_portal_view = self.ui.portal_view(id!(tooltip_portal_view));
+            //         tooltip_portal_view.apply_over_and_redraw(
+            //             cx,
+            //             live! {
+            //                 padding: { left: (pos.x), top: (pos.y) }
+            //             },
+            //         );
 
-                    let mut portal = self.ui.portal(id!(portal_root));
-                    let _ = portal.show_portal_view_by_id(cx, live_id!(tooltip_portal_view));
-                }
-                TooltipAction::Hide => {
-                    let mut portal = self.ui.portal(id!(portal_root));
-                    let _ = portal.close(cx);
-                }
-                _ => {}
-            }
+            //         let mut portal = self.ui.portal(id!(portal_root));
+            //         let _ = portal.show_portal_view_by_id(cx, live_id!(tooltip_portal_view));
+            //     }
+            //     TooltipAction::Hide => {
+            //         let mut portal = self.ui.portal(id!(portal_root));
+            //         let _ = portal.close(cx);
+            //     }
+            //     _ => {}
+            // }
 
             if let ChatHistoryCardOptionsAction::Selected(chat_id, cords) =
                 action.as_widget_action().cast()

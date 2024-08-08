@@ -2,7 +2,7 @@ use makepad_widgets::*;
 
 use crate::{
     data::{chats::chat::ChatID, store::Store},
-    shared::actions::TooltipAction,
+    shared::tooltip::{TooltipAction, TooltipWidgetExt},
 };
 
 live_design! {
@@ -11,6 +11,7 @@ live_design! {
 
     import crate::shared::styles::*;
     import crate::shared::widgets::*;
+    import crate::shared::tooltip::*;
     import makepad_draw::shader::std::*;
 
     ICON_CLOSE_PANEL = dep("crate://self/resources/icons/close_right_panel.svg")
@@ -210,6 +211,8 @@ live_design! {
                 }
             }
         }
+
+        tooltip = <Tooltip> {}
     }
 }
 
@@ -416,12 +419,10 @@ impl ChatParams {
     ) {
         let widget_uid = self.widget_uid();
         let slider = self.slider(slider_id);
+
         if let Some(rect) = slider.label_hover_in(&actions) {
-            cx.widget_action(
-                widget_uid,
-                &scope.path,
-                TooltipAction::Show(text, rect.pos + offset),
-            );
+            self.deref.tooltip(id!(tooltip)).set_text_and_pos(cx, &text, rect.pos + offset);
+            self.deref.tooltip(id!(tooltip)).show_tooltip(cx);
         }
         if slider.label_hover_out(&actions) {
             cx.widget_action(widget_uid, &scope.path, TooltipAction::Hide);
@@ -440,11 +441,8 @@ impl ChatParams {
         let widget_uid = self.widget_uid();
         let label = self.label(label_id);
         if let Some(rect) = label.hover_in(&actions) {
-            cx.widget_action(
-                widget_uid,
-                &scope.path,
-                TooltipAction::Show(text, rect.pos + offset),
-            );
+            self.deref.tooltip(id!(tooltip)).set_text_and_pos(cx, &text, rect.pos + offset);
+            self.deref.tooltip(id!(tooltip)).show_tooltip(cx);
         }
         if label.hover_out(&actions) {
             cx.widget_action(widget_uid, &scope.path, TooltipAction::Hide);

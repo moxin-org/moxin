@@ -10,8 +10,6 @@ live_design! {
     import crate::shared::portal::*;
 
     Modal = {{Modal}} {
-        opened: false
-
         width: Fill
         height: Fill
         flow: Overlay
@@ -45,8 +43,6 @@ live_design! {
 #[derive(Live, Widget)]
 pub struct Modal {
     #[live]
-    opened: bool,
-    #[live]
     #[find]
     content: View,
     #[live]
@@ -62,6 +58,9 @@ pub struct Modal {
     layout: Layout,
     #[walk]
     walk: Walk,
+
+    #[rust]
+    opened: bool,
 }
 
 impl LiveHook for Modal {
@@ -131,12 +130,30 @@ impl WidgetMatchEvent for Modal {
     }
 }
 
+impl Modal {
+    pub fn open_modal(&mut self, cx: &mut Cx) {
+        self.opened = true;
+        self.redraw(cx);
+        cx.sweep_lock(self.draw_bg.area());
+    }
+
+    pub fn close_modal(&mut self, cx: &mut Cx) {
+        self.opened = false;
+        self.draw_bg.redraw(cx);
+        cx.sweep_unlock(self.draw_bg.area())
+    }
+}
+
 impl ModalRef {
     pub fn open_modal(&self, cx: &mut Cx) {
         if let Some(mut inner) = self.borrow_mut() {
-            inner.opened = true;
-            inner.redraw(cx);
-            cx.sweep_lock(inner.draw_bg.area());
+            inner.open_modal(cx);
+        }
+    }
+
+    pub fn close_modal(&self, cx: &mut Cx) {
+        if let Some(mut inner) = self.borrow_mut() {
+            inner.close_modal(cx);
         }
     }
 }
