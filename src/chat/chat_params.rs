@@ -60,12 +60,13 @@ live_design! {
                     width: Fill
                     spacing: 12
                     padding: {left: 4}
-                    <Label> {
+                    system_prompt_label = <Label> {
                         draw_text: {
                             text_style: <BOLD_FONT>{font_size: 10},
                             color: #000
                         }
                         text: "System Prompt"
+                        hover_actions_enabled: true
                     }
                     <ChatParamsTextInputWrapper> {
                         height: 90,
@@ -357,6 +358,13 @@ impl ChatParams {
         if !self.is_open(cx) {
             return;
         }
+
+        self.handle_tooltip_actions_for_label(
+            id!(system_prompt_label),
+            "A system prompt is a fixed prompt providing context and instructions to the model. The system prompt is always included in the provided input to the LLM, regardless of the user prompt.".to_string(),
+            TOOLTIP_OFFSET,
+            cx, actions, scope
+        );
 
         self.handle_tooltip_actions_for_slider(
             id!(temperature),
