@@ -1,7 +1,5 @@
 use makepad_widgets::*;
 
-use super::modal::Modal;
-
 live_design! {
     import makepad_widgets::base::*;
     import makepad_widgets::theme_desktop_dark::*;
@@ -56,14 +54,6 @@ live_design! {
     }
 }
 
-#[derive(Clone, DefaultNone, Debug)]
-pub enum TooltipAction {
-    Show(String, DVec2),
-    Hide,
-    None,
-}
-
-
 #[derive(Live, LiveHook, Widget)]
 pub struct Tooltip {
     #[rust]
@@ -88,10 +78,9 @@ pub struct Tooltip {
 impl Widget for Tooltip {
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
         self.content.handle_event(cx, event, scope);
-        self.widget_match_event(cx, event, scope);
     }
 
-    fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, walk: Walk) -> DrawStep {
+    fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, _walk: Walk) -> DrawStep {
         self.draw_list.begin_overlay_reuse(cx);
 
         cx.begin_pass_sized_turtle(self.layout);
@@ -110,19 +99,6 @@ impl Widget for Tooltip {
     }
 }
 
-impl WidgetMatchEvent for Tooltip {
-    fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, _scope: &mut Scope) {
-        for action in actions {
-            match action.as_widget_action().cast::<TooltipAction>() {
-                TooltipAction::Hide => {
-                    self.opened = false;
-                }
-                _ => {}
-            }
-        }
-    }
-}
-
 impl TooltipRef {
     pub fn set_text_and_pos(&mut self, cx: &mut Cx, text: &str, pos: DVec2) {
         if let Some(mut inner) = self.borrow_mut() {
@@ -137,9 +113,15 @@ impl TooltipRef {
         }
     }
 
-    pub fn show_tooltip(&self, cx: &mut Cx) {
+    pub fn show_tooltip(&mut self) {
         if let Some(mut inner) = self.borrow_mut() {
             inner.opened = true;
+        }
+    }
+
+    pub fn hide_tooltip(&mut self) {
+        if let Some(mut inner) = self.borrow_mut() {
+            inner.opened = false;
         }
     }
 }

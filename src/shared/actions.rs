@@ -1,4 +1,4 @@
-use makepad_widgets::{DVec2, DefaultNone};
+use makepad_widgets::DefaultNone;
 use moxin_protocol::data::FileID;
 
 #[derive(Clone, DefaultNone, Debug)]

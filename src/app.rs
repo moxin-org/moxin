@@ -117,10 +117,6 @@ live_design! {
                         popup_download_success = <DownloadNotificationPopup> {}
                     }
 
-                    // tooltip_portal_view = <PortalView> {
-                    //     tooltip = <Tooltip> {}
-                    // }
-
                     chat_history_card_options_portal_view = <PortalView> {
                         chat_history_card_options = <ChatHistoryCardOptions> {}
                     }
@@ -251,29 +247,6 @@ impl MatchEvent for App {
                 let chat_radio_button = self.ui.radio_button(id!(chat_tab));
                 chat_radio_button.select(cx, &mut Scope::empty());
             }
-
-            // match action.as_widget_action().cast() {
-            //     TooltipAction::Show(text, pos) => {
-            //         let mut tooltip = self.ui.tooltip(id!(tooltip));
-            //         tooltip.set_text(&text);
-
-            //         let tooltip_portal_view = self.ui.portal_view(id!(tooltip_portal_view));
-            //         tooltip_portal_view.apply_over_and_redraw(
-            //             cx,
-            //             live! {
-            //                 padding: { left: (pos.x), top: (pos.y) }
-            //             },
-            //         );
-
-            //         let mut portal = self.ui.portal(id!(portal_root));
-            //         let _ = portal.show_portal_view_by_id(cx, live_id!(tooltip_portal_view));
-            //     }
-            //     TooltipAction::Hide => {
-            //         let mut portal = self.ui.portal(id!(portal_root));
-            //         let _ = portal.close(cx);
-            //     }
-            //     _ => {}
-            // }
 
             if let ChatHistoryCardOptionsAction::Selected(chat_id, cords) =
                 action.as_widget_action().cast()
