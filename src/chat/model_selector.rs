@@ -3,6 +3,7 @@ use crate::{
     shared::{actions::ChatAction, utils::format_model_size},
 };
 use makepad_widgets::*;
+use moxin_protocol::data::{File, Model};
 
 use super::{
     model_selector_list::{ModelSelectorAction, ModelSelectorListWidgetExt},
@@ -320,6 +321,39 @@ impl ModelSelector {
     }
 
     fn update_selected_model_info(&mut self, cx: &mut Cx, store: &Store) {
+        let is_loading = store.chats.model_loader.is_loading();
+
+        let file = store
+            .chats
+            .get_current_chat()
+            .and_then(|c| c.borrow().last_used_file_id.clone())
+            .and_then(|file_id| store.downloads.get_file(&file_id).cloned())
+            .or_else(|| store.chats.loaded_model.clone());
+
+        let model = file
+            .as_ref()
+            .map(|f| store.downloads.get_model_by_file_id(&f.id).cloned())
+            .flatten();
+
+        let file_name = file.as_ref().map(|f| f.name.trim()).unwrap_or("");
+        let architecture = model.as_ref().map(|m| m.architecture.trim()).unwrap_or("");
+        let params_size = model.as_ref().map(|m| m.size.trim()).unwrap_or("");
+        let file_size = file
+            .as_ref()
+            .map(|f| format_model_size(f.size.trim()).ok())
+            .flatten()
+            .unwrap_or("".into());
+
+        let is_architecture_visible = !architecture.is_empty() && !is_loading;
+        let is_params_size_visible = !params_size.is_empty() && !is_loading;
+        let is_file_size_visible = !file_size.is_empty() && !is_loading;
+
+        let caption = if is_loading {
+            format!("Loading {}", file_name)
+        } else {
+            file_name.to_string()
+        };
+
         self.view(id!(choose)).apply_over(
             cx,
             live! {
@@ -327,48 +361,16 @@ impl ModelSelector {
             },
         );
 
-        if let Some(file) = &store.get_currently_loading_model() {
-            // When a model is being loaded, show the "loading state"
-            let caption = format!("Loading {}", file.name);
-            self.view(id!(selected)).apply_over(
-                cx,
-                live! {
-                    visible: true
-                    label = { text: (caption) }
-                    architecture_tag = { visible: false }
-                    params_size_tag = { visible: false }
-                    file_size_tag = { visible: false }
-                },
-            );
-        } else {
-            let Some(downloaded_file) = store.get_loaded_downloaded_file() else {
-                error!("Error displaying current loaded model");
-                return;
-            };
-
-            // When a model is loaded, show the model info
-            let filename = downloaded_file.file.name;
-
-            let architecture = downloaded_file.model.architecture;
-            let architecture_visible = !architecture.trim().is_empty();
-
-            let param_size = downloaded_file.model.size;
-            let param_size_visible = !param_size.trim().is_empty();
-
-            let size = format_model_size(&downloaded_file.file.size).unwrap_or("".to_string());
-            let size_visible = !size.trim().is_empty();
-
-            self.view(id!(selected)).apply_over(
-                cx,
-                live! {
-                    visible: true
-                    label = { text: (filename) }
-                    architecture_tag = { visible: (architecture_visible), caption = { text: (architecture) }}
-                    params_size_tag = { visible: (param_size_visible), caption = { text: (param_size) }}
-                    file_size_tag = { visible: (size_visible), caption = { text: (size) }}
-                },
-            );
-        }
+        self.view(id!(selected)).apply_over(
+            cx,
+            live! {
+                visible: true
+                label = { text: (caption) }
+                architecture_tag = { visible: (is_architecture_visible), caption = { text: (architecture) }}
+                params_size_tag = { visible: (is_params_size_visible), caption = { text: (params_size) }}
+                file_size_tag = { visible: (is_file_size_visible), caption = { text: (file_size) }}
+            },
+        );
 
         self.redraw(cx);
     }
