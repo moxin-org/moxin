@@ -230,6 +230,15 @@ impl Chat {
                     name: None,
                 }
             );
+        } else {
+            messages.insert(
+                0 as usize,
+                Message {
+                    content: "You are a helpful, respectful, and honest assistant.".to_string(),
+                    role: Role::System,
+                    name: None,
+                }
+            );
         }
 
         let ip = &self.inferences_params;
