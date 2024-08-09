@@ -83,6 +83,7 @@ impl Widget for ModelList {
         if self.loading_delay.is_event(event).is_some() {
             self.update_loading_and_error_message(cx, scope);
         }
+        self.redraw(cx);
     }
 
     fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, walk: Walk) -> DrawStep {
