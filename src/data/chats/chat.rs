@@ -1,9 +1,12 @@
 use anyhow::{anyhow, Result};
 use makepad_widgets::SignalToUI;
 use moxin_backend::Backend;
+use moxin_mae::MaeAgent;
 use moxin_protocol::data::{File, FileID};
 use moxin_protocol::open_ai::*;
 use moxin_protocol::protocol::Command;
+use serde_json::Value;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
@@ -21,7 +24,7 @@ pub enum ChatTokenArrivalAction {
     AppendDelta(String),
     StreamingDone,
 
-    MaeResult(String),
+    MaeResult(String, MaeAgent),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -364,27 +367,45 @@ impl Chat {
                     last.content.push_str(&response);
                 }
                 // Mae Prototype
-                ChatTokenArrivalAction::MaeResult(response) => {
-                    #[derive(Serialize, Deserialize)]
-                    struct MaeResponse {
-                        pub task: String,
-                        pub result: String,
+                ChatTokenArrivalAction::MaeResult(response, agent) => {
+                    match agent {
+                        MaeAgent::Questioner => {
+                            let response =
+                                serde_json::from_str::<MaeResponseQuestioner>(&response).unwrap();
+
+                            self.messages.push(ChatMessage {
+                                id: self.messages.len() + 1,
+                                role: Role::User,
+                                username: None,
+                                content: response.task,
+                            });
+
+                            self.messages.push(ChatMessage {
+                                id: self.messages.len() + 1,
+                                role: Role::Assistant,
+                                username: Some("Reasoner Agent".to_string()),
+                                content: response.result,
+                            });
+                        }
+                        MaeAgent::WebSearch => {
+                            let response =
+                                serde_json::from_str::<MaeResponseWebSearch>(&response).unwrap();
+
+                            self.messages.push(ChatMessage {
+                                id: self.messages.len() + 1,
+                                role: Role::User,
+                                username: None,
+                                content: response.task,
+                            });
+
+                            self.messages.push(ChatMessage {
+                                id: self.messages.len() + 1,
+                                role: Role::Assistant,
+                                username: Some("Web Search Agent".to_string()),
+                                content: response.result["web_search_results"].as_str().unwrap().to_string(),
+                            });
+                        }
                     }
-                    let response = serde_json::from_str::<MaeResponse>(&response).unwrap();
-
-                    self.messages.push(ChatMessage {
-                        id: self.messages.len() + 1,
-                        role: Role::User,
-                        username: None,
-                        content: response.task,
-                    });
-
-                    self.messages.push(ChatMessage {
-                        id: self.messages.len() + 1,
-                        role: Role::Assistant,
-                        username: Some("Reasoner Agent".to_string()),
-                        content: response.result,
-                    });
 
                     dbg!(&self.messages);
                 }
@@ -419,4 +440,16 @@ impl Chat {
     pub fn update_accessed_at(&mut self) {
         self.accessed_at = chrono::Utc::now();
     }
+}
+
+#[derive(Serialize, Deserialize)]
+struct MaeResponseQuestioner {
+    pub task: String,
+    pub result: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct MaeResponseWebSearch {
+    pub task: String,
+    pub result: HashMap<String, Value>,
 }
