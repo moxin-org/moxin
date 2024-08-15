@@ -1,0 +1,26 @@
+nodes:
+  - id: reasoner_task_input
+    path: dynamic
+    inputs:
+      direction: dora/timer/secs/1
+      reasoner_log: reasoner_output/reasoner_output
+    outputs:
+      - reasoner_task
+  - id: reasoner_agent
+    operator:
+      python: ./scripts/reasoner_agent.py
+      inputs:
+        reasoner_task: reasoner_task_input/reasoner_task
+      outputs:
+        - reasoner_result
+  - id: reasoner_output_moxin
+    path: dynamic
+    inputs:
+      reasoner_result: reasoner_agent/reasoner_result
+  - id: reasoner_output
+    operator:
+      python: ./scripts/reasoner_output.py
+      inputs:
+        reasoner_result: reasoner_agent/reasoner_result
+      outputs:
+        - reasoner_output

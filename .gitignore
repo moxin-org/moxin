@@ -6,3 +6,6 @@ data.*
 /wasmedge
 /WasmEdge*
 .DS_Store
+moxin-mae/agents/reasoner/data/**
+moxin-mae/agents/reasoner/out/**
+moxin-mae/agents/reasoner/scripts/__pycache__/**
