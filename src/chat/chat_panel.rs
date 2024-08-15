@@ -779,7 +779,10 @@ impl ChatPanel {
             } | State::ModelSelectedWithEmptyChat { is_loading: false }
         ) {
             let store = scope.data.get_mut::<Store>().unwrap();
-            store.send_chat_message(prompt.clone());
+            //store.send_chat_message(prompt.clone());
+
+            // MAE
+            store.send_message_to_agent(prompt.clone());
 
             let prompt_input = self.text_input(id!(main_prompt_input.prompt));
             prompt_input.set_text_and_redraw(cx, "");

@@ -1,3 +1,5 @@
+use crate::data::chats::chat::{ChatMessage, ChatTokenArrivalAction};
+
 use super::chats::chat::ChatID;
 use super::filesystem::project_dirs;
 use super::preferences::Preferences;
@@ -7,8 +9,11 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use makepad_widgets::{DefaultNone, SignalToUI};
 use moxin_backend::Backend;
+use moxin_mae::MoxinMae;
 use moxin_protocol::data::{Author, DownloadedFile, File, FileID, Model, ModelID, PendingDownload};
+use moxin_protocol::open_ai::Role;
 use std::rc::Rc;
+use std::sync::mpsc;
 
 pub const DEFAULT_MAX_DOWNLOAD_THREADS: usize = 3;
 
@@ -45,6 +50,8 @@ pub struct Store {
     /// communicate with the backend thread.
     pub backend: Rc<Backend>,
 
+    pub mae_command_sender: mpsc::Sender<(String, mpsc::Sender<String>)>,
+
     pub search: Search,
     pub downloads: Downloads,
     pub chats: Chats,
@@ -68,8 +75,12 @@ impl Store {
             DEFAULT_MAX_DOWNLOAD_THREADS,
         ));
 
+        let mae = MoxinMae::new();
+
         let mut store = Self {
             backend: backend.clone(),
+            mae_command_sender: mae.command_sender,
+
             search: Search::new(backend.clone()),
             downloads: Downloads::new(backend.clone()),
             chats: Chats::new(backend),
@@ -84,6 +95,40 @@ impl Store {
 
         store.search.load_featured_models();
         store
+    }
+
+    pub fn send_message_to_agent(&self, message: String) {
+        dbg!("send_message_to_agent");
+        let (tx, rx) = mpsc::channel();
+        self.mae_command_sender
+            .send((message, tx))
+            .expect("failed to send message to agent");
+
+        let chat = self.chats.get_current_chat().unwrap().borrow_mut();
+        let store_chat_tx = chat.messages_update_sender.clone();
+        std::thread::spawn(move || {
+            match rx.recv() {
+                Ok(response) => {
+                    println!("Received response from agent: {}", response);
+                    let _ = store_chat_tx.send(ChatTokenArrivalAction::MaeResult(
+                        response.clone(),
+                    ));
+                    let _ = store_chat_tx.send(ChatTokenArrivalAction::StreamingDone);
+                    SignalToUI::set_ui_signal();
+                }
+                Err(e) => {
+                    println!("Error receiving response from agent: {:?}", e);
+                }
+            }
+        });
+
+        // let next_id = chat.messages.last().map(|m| m.id).unwrap_or(0) + 1;
+        // chat.messages.push(ChatMessage {
+        //     id: next_id + 1,
+        //     role: Role::Assistant,
+        //     username: Some("Agent".to_string()),
+        //     content: response.to_string(),
+        // });
     }
 
     pub fn load_model(&mut self, file: &File) {
