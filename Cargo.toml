@@ -6,6 +6,7 @@ members = [
     "moxin-protocol",
     "moxin-backend",
     "moxin-fake-backend",
+    "moxin-mae"
 ]
 exclude = ["packaging/before-packaging-command"]
 
@@ -27,6 +28,7 @@ path = "src/main.rs"
 moxin-protocol = { path = "moxin-protocol" }
 moxin-backend = { path = "moxin-backend" }
 moxin-fake-backend = { path = "moxin-fake-backend" }
+moxin-mae = { path = "moxin-mae"}
 
 makepad-widgets = { git = "https://github.com/jmbejar/makepad", branch = "moxin-release-v1" }
 

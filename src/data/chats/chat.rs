@@ -20,6 +20,8 @@ pub type ChatID = u128;
 pub enum ChatTokenArrivalAction {
     AppendDelta(String),
     StreamingDone,
+
+    MaeResult(String),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -361,6 +363,32 @@ impl Chat {
                     let last = self.messages.last_mut().unwrap();
                     last.content.push_str(&response);
                 }
+                // Mae Prototype
+                ChatTokenArrivalAction::MaeResult(response) => {
+                    #[derive(Serialize, Deserialize)]
+                    struct MaeResponse {
+                        pub task: String,
+                        pub result: String,
+                    }
+                    let response = serde_json::from_str::<MaeResponse>(&response).unwrap();
+
+                    self.messages.push(ChatMessage {
+                        id: self.messages.len() + 1,
+                        role: Role::User,
+                        username: None,
+                        content: response.task,
+                    });
+
+                    self.messages.push(ChatMessage {
+                        id: self.messages.len() + 1,
+                        role: Role::Assistant,
+                        username: Some("Reasoner Agent".to_string()),
+                        content: response.result,
+                    });
+
+                    dbg!(&self.messages);
+                }
+
                 ChatTokenArrivalAction::StreamingDone => {
                     self.is_streaming = false;
                 }
