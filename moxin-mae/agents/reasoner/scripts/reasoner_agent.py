@@ -19,16 +19,18 @@ class Operator:
         if dora_event["type"] == "INPUT":
             agent_inputs = ['reasoner_task','task_input']
             if dora_event["id"] in agent_inputs:
-                print(f'config:   {dora_event}')
-                # dora_result = json.loads(dora_event["value"][0].as_py())
-                # task_inputs = json.loads(dora_event["value"][0].as_py())
-
+                
                 task_inputs = dora_event["value"][0].as_py()
+                agent_file = dora_event["value"][1].as_py()
+
                 print(f'config:   {task_inputs}')
                 if isinstance(task_inputs, dict):
                     task = task_inputs.get('task', None)
                 else: task = task_inputs
-                yaml_file_path = get_relative_path(current_file=__file__, sibling_directory_name='configs', target_file_name='reasoner_agent.yml')
+                
+                #yaml_file_path = get_relative_path(current_file=__file__, sibling_directory_name='configs', target_file_name='reasoner_agent.yml')
+                yaml_file_path = get_relative_path(current_file=__file__, sibling_directory_name='configs', target_file_name=agent_file)
+                
                 inputs = load_agent_config(yaml_file_path)
                 if inputs.get('check_log_prompt', None) is True:
                     log_config = {}

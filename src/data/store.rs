@@ -1,4 +1,4 @@
-use crate::data::chats::chat::{ChatMessage, ChatTokenArrivalAction};
+use crate::data::chats::chat::ChatTokenArrivalAction;
 
 use super::chats::chat::ChatID;
 use super::filesystem::project_dirs;
@@ -11,7 +11,7 @@ use makepad_widgets::{DefaultNone, SignalToUI};
 use moxin_backend::Backend;
 use moxin_mae::MoxinMae;
 use moxin_protocol::data::{Author, DownloadedFile, File, FileID, Model, ModelID, PendingDownload};
-use moxin_protocol::open_ai::Role;
+use moxin_mae::MaeAgent;
 use std::rc::Rc;
 use std::sync::mpsc;
 
@@ -50,7 +50,7 @@ pub struct Store {
     /// communicate with the backend thread.
     pub backend: Rc<Backend>,
 
-    pub mae_command_sender: mpsc::Sender<(String, mpsc::Sender<String>)>,
+    pub mae_command_sender: mpsc::Sender<(String, MaeAgent, mpsc::Sender<String>)>,
 
     pub search: Search,
     pub downloads: Downloads,
@@ -98,10 +98,10 @@ impl Store {
     }
 
     pub fn send_message_to_agent(&self, message: String) {
-        dbg!("send_message_to_agent");
         let (tx, rx) = mpsc::channel();
+        let agent = MaeAgent::WebSearch;
         self.mae_command_sender
-            .send((message, tx))
+            .send((message, agent, tx))
             .expect("failed to send message to agent");
 
         let chat = self.chats.get_current_chat().unwrap().borrow_mut();
@@ -112,6 +112,7 @@ impl Store {
                     println!("Received response from agent: {}", response);
                     let _ = store_chat_tx.send(ChatTokenArrivalAction::MaeResult(
                         response.clone(),
+                        agent.clone(),
                     ));
                     let _ = store_chat_tx.send(ChatTokenArrivalAction::StreamingDone);
                     SignalToUI::set_ui_signal();
@@ -121,14 +122,6 @@ impl Store {
                 }
             }
         });
-
-        // let next_id = chat.messages.last().map(|m| m.id).unwrap_or(0) + 1;
-        // chat.messages.push(ChatMessage {
-        //     id: next_id + 1,
-        //     role: Role::Assistant,
-        //     username: Some("Agent".to_string()),
-        //     content: response.to_string(),
-        // });
     }
 
     pub fn load_model(&mut self, file: &File) {

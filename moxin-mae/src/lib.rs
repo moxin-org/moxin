@@ -8,9 +8,24 @@ use eyre::Context;
 
 use std::sync::mpsc::{self, channel};
 
+#[derive(Debug, Copy, Clone)]
+pub enum MaeAgent {
+    Questioner,
+    WebSearch
+}
+
+impl MaeAgent {
+    fn to_string(&self) -> String {
+        match self {
+            MaeAgent::Questioner => "reasoner_agent.yml".to_string(),
+            MaeAgent::WebSearch => "web_search_by_dspy.yml".to_string()
+        }
+    }
+}
+
 pub struct MoxinMae {
     // command_receiver: mpsc::Receiver<String>,
-    pub command_sender: mpsc::Sender<(String, mpsc::Sender<String>)>,
+    pub command_sender: mpsc::Sender<(String, MaeAgent, mpsc::Sender<String>)>,
 }
 
 impl MoxinMae {
@@ -70,16 +85,19 @@ impl MoxinMae {
     }
 
     pub fn start_sender_loop(
-        command_receiver: mpsc::Receiver<(String, mpsc::Sender<String>)>,
+        command_receiver: mpsc::Receiver<(String, MaeAgent, mpsc::Sender<String>)>,
         rx: mpsc::Receiver<String>,
     ) {
         if let Ok((mut node, _events)) =
             DoraNode::init_from_node_id(NodeId::from("reasoner_task_input".to_string()))
         {
             loop {
-                let (buffer, tx) = command_receiver.recv().unwrap();
+                let (buffer, agent, tx) = command_receiver.recv().unwrap();
 
-                let data = StringArray::from(vec![buffer.trim().to_string()]);
+                let data = StringArray::from(vec![
+                    buffer.trim().to_string(),
+                    agent.to_string()
+                ]);
 
                 let res = node.send_output(
                     DataId::from("reasoner_task".to_string()),
