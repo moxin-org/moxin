@@ -1,4 +1,5 @@
 use makepad_widgets::*;
+use moxin_mae::MaeAgent;
 use moxin_protocol::data::FileID;
 use std::cell::{Ref, RefCell, RefMut};
 
@@ -431,7 +432,7 @@ enum State {
     ModelSelectedWithChat {
         is_loading: bool,
         sticked_to_bottom: bool,
-        is_streaming: bool,
+        receiving_response: bool,
     },
 }
 
@@ -468,7 +469,7 @@ impl Widget for ChatPanel {
         if let Event::Signal = event {
             match self.state {
                 State::ModelSelectedWithChat {
-                    is_streaming: true,
+                    receiving_response: true,
                     sticked_to_bottom,
                     ..
                 } => {
@@ -581,14 +582,14 @@ impl WidgetMatchEvent for ChatPanel {
 
         match self.state {
             State::ModelSelectedWithChat {
-                is_streaming: false,
+                receiving_response: false,
                 ..
             }
             | State::ModelSelectedWithEmptyChat { .. } => {
                 self.handle_prompt_input_actions(cx, actions, scope);
             }
             State::ModelSelectedWithChat {
-                is_streaming: true, ..
+                receiving_response: true, ..
             } => {
                 if self
                     .button(id!(main_prompt_input.prompt_stop_button))
@@ -631,7 +632,7 @@ impl ChatPanel {
                             is_loading,
                             sticked_to_bottom: self.portal_list_end_reached
                                 || !matches!(self.state, State::ModelSelectedWithChat { .. }),
-                            is_streaming: chat.borrow().is_streaming,
+                            receiving_response: chat.borrow().receiving_response,
                         }
                     }
                 },
@@ -650,13 +651,13 @@ impl ChatPanel {
             State::ModelSelectedWithEmptyChat { is_loading: false }
             | State::ModelSelectedWithChat {
                 is_loading: false,
-                is_streaming: false,
+                receiving_response: false,
                 ..
             } => {
                 self.activate_prompt_input(cx, PromptInputMode::Enabled, PromptInputButton::Send);
             }
             State::ModelSelectedWithChat {
-                is_streaming: true, ..
+                receiving_response: true, ..
             } => {
                 self.activate_prompt_input(cx, PromptInputMode::Disabled, PromptInputButton::Stop);
             }
@@ -773,7 +774,7 @@ impl ChatPanel {
         if matches!(
             self.state,
             State::ModelSelectedWithChat {
-                is_streaming: false,
+                receiving_response: false,
                 is_loading: false,
                 ..
             } | State::ModelSelectedWithEmptyChat { is_loading: false }
@@ -782,7 +783,7 @@ impl ChatPanel {
             //store.send_chat_message(prompt.clone());
 
             // MAE
-            store.send_message_to_agent(prompt.clone());
+            store.send_agent_message(MaeAgent::Questioner, prompt.clone());
 
             let prompt_input = self.text_input(id!(main_prompt_input.prompt));
             prompt_input.set_text_and_redraw(cx, "");
@@ -891,7 +892,7 @@ impl ChatPanel {
                 if matches!(
                     self.state,
                     State::ModelSelectedWithChat {
-                        is_streaming: true,
+                        receiving_response: true,
                         ..
                     }
                 ) && item_id == messages_count - 1

@@ -1,17 +1,16 @@
 use anyhow::{anyhow, Result};
 use makepad_widgets::SignalToUI;
 use moxin_backend::Backend;
-use moxin_mae::MaeAgent;
+use moxin_mae::{MaeAgent, MaeAgentResponse, MaeBackend};
+use moxin_mae::MaeAgentCommand::SendTask;
 use moxin_protocol::data::{File, FileID};
 use moxin_protocol::open_ai::*;
 use moxin_protocol::protocol::Command;
-use serde_json::Value;
-use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::mpsc::{self, channel, Receiver, Sender};
 use std::thread;
-
 use serde::{Deserialize, Serialize};
+use moxin_mae::{MaeResponseQuestioner, MaeResponseWebSearch};
 
 use crate::data::filesystem::{read_from_file, write_to_file};
 
@@ -20,11 +19,10 @@ use super::model_loader::ModelLoader;
 pub type ChatID = u128;
 
 #[derive(Clone, Debug)]
-pub enum ChatTokenArrivalAction {
-    AppendDelta(String),
-    StreamingDone,
-
-    MaeResult(String, MaeAgent),
+pub enum ChatMessageAction {
+    ModelAppendDelta(String),
+    ModelStreamingDone,
+    MaeAgentResult(String, MaeAgent),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -92,9 +90,9 @@ pub struct Chat {
     pub id: ChatID,
     pub last_used_file_id: Option<FileID>,
     pub messages: Vec<ChatMessage>,
-    pub messages_update_sender: Sender<ChatTokenArrivalAction>,
-    pub messages_update_receiver: Receiver<ChatTokenArrivalAction>,
-    pub is_streaming: bool,
+    pub messages_update_sender: Sender<ChatMessageAction>,
+    pub messages_update_receiver: Receiver<ChatMessageAction>,
+    pub receiving_response: bool,
     pub inferences_params: ChatInferenceParams,
     pub system_prompt: Option<String>,
     pub accessed_at: chrono::DateTime<chrono::Utc>,
@@ -119,7 +117,7 @@ impl Chat {
             messages_update_sender: tx,
             messages_update_receiver: rx,
             last_used_file_id: None,
-            is_streaming: false,
+            receiving_response: false,
             title_state: TitleState::default(),
             chats_dir,
             inferences_params: ChatInferenceParams::default(),
@@ -140,7 +138,7 @@ impl Chat {
                     messages: data.messages,
                     title: data.title,
                     title_state: data.title_state,
-                    is_streaming: false,
+                    receiving_response: false,
                     messages_update_sender: tx,
                     messages_update_receiver: rx,
                     chats_dir,
@@ -212,6 +210,7 @@ impl Chat {
             }
         }
     }
+
     pub fn send_message_to_model(
         &mut self,
         prompt: String,
@@ -299,7 +298,7 @@ impl Chat {
             content: "".to_string(),
         });
 
-        self.is_streaming = true;
+        self.receiving_response = true;
 
         let store_chat_tx = self.messages_update_sender.clone();
         let wanted_file = wanted_file.clone();
@@ -318,13 +317,13 @@ impl Chat {
                         Ok(ChatResponse::ChatResponseChunk(data)) => {
                             let mut is_done = false;
 
-                            let _ = store_chat_tx.send(ChatTokenArrivalAction::AppendDelta(
+                            let _ = store_chat_tx.send(ChatMessageAction::ModelAppendDelta(
                                 data.choices[0].delta.content.clone(),
                             ));
 
                             if let Some(_reason) = &data.choices[0].finish_reason {
                                 is_done = true;
-                                let _ = store_chat_tx.send(ChatTokenArrivalAction::StreamingDone);
+                                let _ = store_chat_tx.send(ChatMessageAction::ModelStreamingDone);
                             }
 
                             SignalToUI::set_ui_signal();
@@ -333,10 +332,10 @@ impl Chat {
                             }
                         }
                         Ok(ChatResponse::ChatFinalResponseData(data)) => {
-                            let _ = store_chat_tx.send(ChatTokenArrivalAction::AppendDelta(
+                            let _ = store_chat_tx.send(ChatMessageAction::ModelAppendDelta(
                                 data.choices[0].message.content.clone(),
                             ));
-                            let _ = store_chat_tx.send(ChatTokenArrivalAction::StreamingDone);
+                            let _ = store_chat_tx.send(ChatMessageAction::ModelStreamingDone);
                             SignalToUI::set_ui_signal();
                             break;
                         }
@@ -351,6 +350,56 @@ impl Chat {
         self.update_title_based_on_first_message();
     }
 
+    pub fn send_message_to_agent(&mut self, agent: MaeAgent, prompt: String, mae_backend: &MaeBackend) {
+        let (tx, rx) = mpsc::channel();
+        mae_backend.command_sender
+            .send(SendTask(prompt.clone(), agent.clone(), tx.clone()))
+            .expect("failed to send message to agent");
+
+        self.messages.push(ChatMessage {
+            id: self.messages.len() + 1,
+            role: Role::User,
+            username: None,
+            content: prompt,
+        });
+
+        self.messages.push(ChatMessage {
+            id: self.messages.len() + 1,
+            role: Role::Assistant,
+            username: Some(agent.name()),
+            content: "".to_string(),
+        });
+
+        let store_chat_tx = self.messages_update_sender.clone();
+        std::thread::spawn(move || {
+            match rx.recv() {
+                Ok(response) => {
+                    println!("Received response from agent: {:?}", response);
+                    match response {
+                        MaeAgentResponse::QuestionerResponse(response) => {
+                            let _ = store_chat_tx.send(ChatMessageAction::MaeAgentResult(
+                                response.result,
+                                agent.clone(),
+                            ));
+                        },
+                        MaeAgentResponse::WebSearchResponse(response) => {
+                            // TODO Take care of the full response.
+                            // We may want to generate a markdown text based on the other fields.
+                            let _ = store_chat_tx.send(ChatMessageAction::MaeAgentResult(
+                                response.result["web_search_results"].as_str().unwrap().to_string(),
+                                agent.clone(),
+                            ));
+                        },
+                    }
+                    SignalToUI::set_ui_signal();
+                }
+                Err(e) => {
+                    println!("Error receiving response from agent: {:?}", e);
+                }
+            }
+        });
+    }
+
     pub fn cancel_streaming(&mut self, backend: &Backend) {
         let (tx, _rx) = channel();
         let cmd = Command::StopChatCompletion(tx);
@@ -362,56 +411,31 @@ impl Chat {
     pub fn update_messages(&mut self) {
         for msg in self.messages_update_receiver.try_iter() {
             match msg {
-                ChatTokenArrivalAction::AppendDelta(response) => {
+                ChatMessageAction::ModelAppendDelta(response) => {
                     let last = self.messages.last_mut().unwrap();
                     last.content.push_str(&response);
                 }
-                // Mae Prototype
-                ChatTokenArrivalAction::MaeResult(response, agent) => {
+                ChatMessageAction::ModelStreamingDone => {
+                    self.receiving_response = false;
+                }
+                ChatMessageAction::MaeAgentResult(response, agent) => {
                     match agent {
                         MaeAgent::Questioner => {
                             let response =
                                 serde_json::from_str::<MaeResponseQuestioner>(&response).unwrap();
 
-                            self.messages.push(ChatMessage {
-                                id: self.messages.len() + 1,
-                                role: Role::User,
-                                username: None,
-                                content: response.task,
-                            });
-
-                            self.messages.push(ChatMessage {
-                                id: self.messages.len() + 1,
-                                role: Role::Assistant,
-                                username: Some("Reasoner Agent".to_string()),
-                                content: response.result,
-                            });
+                            let last = self.messages.last_mut().unwrap();
+                            last.content.push_str(&response.result);
                         }
                         MaeAgent::WebSearch => {
                             let response =
                                 serde_json::from_str::<MaeResponseWebSearch>(&response).unwrap();
 
-                            self.messages.push(ChatMessage {
-                                id: self.messages.len() + 1,
-                                role: Role::User,
-                                username: None,
-                                content: response.task,
-                            });
-
-                            self.messages.push(ChatMessage {
-                                id: self.messages.len() + 1,
-                                role: Role::Assistant,
-                                username: Some("Web Search Agent".to_string()),
-                                content: response.result["web_search_results"].as_str().unwrap().to_string(),
-                            });
+                            let last = self.messages.last_mut().unwrap();
+                            last.content.push_str(response.result["web_search_results"].as_str().unwrap());
                         }
                     }
-
-                    dbg!(&self.messages);
-                }
-
-                ChatTokenArrivalAction::StreamingDone => {
-                    self.is_streaming = false;
+                    self.receiving_response = false;
                 }
             }
             self.save();
@@ -440,16 +464,4 @@ impl Chat {
     pub fn update_accessed_at(&mut self) {
         self.accessed_at = chrono::Utc::now();
     }
-}
-
-#[derive(Serialize, Deserialize)]
-struct MaeResponseQuestioner {
-    pub task: String,
-    pub result: String,
-}
-
-#[derive(Serialize, Deserialize)]
-struct MaeResponseWebSearch {
-    pub task: String,
-    pub result: HashMap<String, Value>,
 }
