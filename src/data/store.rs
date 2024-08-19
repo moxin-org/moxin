@@ -1,5 +1,3 @@
-use crate::data::chats::chat::ChatTokenArrivalAction;
-
 use super::chats::chat::ChatID;
 use super::filesystem::project_dirs;
 use super::preferences::Preferences;
@@ -9,11 +7,9 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use makepad_widgets::{DefaultNone, SignalToUI};
 use moxin_backend::Backend;
-use moxin_mae::MoxinMae;
+use moxin_mae::{MaeAgent, MaeBackend};
 use moxin_protocol::data::{Author, DownloadedFile, File, FileID, Model, ModelID, PendingDownload};
-use moxin_mae::MaeAgent;
 use std::rc::Rc;
-use std::sync::mpsc;
 
 pub const DEFAULT_MAX_DOWNLOAD_THREADS: usize = 3;
 
@@ -51,7 +47,7 @@ pub struct Store {
     /// communicate with the backend thread.
     pub backend: Rc<Backend>,
 
-    pub mae_command_sender: mpsc::Sender<(String, MaeAgent, mpsc::Sender<String>)>,
+    pub mae_backend: Rc<MaeBackend>,
 
     pub search: Search,
     pub downloads: Downloads,
@@ -76,11 +72,11 @@ impl Store {
             DEFAULT_MAX_DOWNLOAD_THREADS,
         ));
 
-        let mae = MoxinMae::new();
+        let mae_backend = MaeBackend::new();
 
         let mut store = Self {
             backend: backend.clone(),
-            mae_command_sender: mae.command_sender,
+            mae_backend: Rc::new(mae_backend),
 
             search: Search::new(backend.clone()),
             downloads: Downloads::new(backend.clone()),
@@ -96,33 +92,6 @@ impl Store {
 
         store.search.load_featured_models();
         store
-    }
-
-    pub fn send_message_to_agent(&self, message: String) {
-        let (tx, rx) = mpsc::channel();
-        let agent = MaeAgent::WebSearch;
-        self.mae_command_sender
-            .send((message, agent, tx))
-            .expect("failed to send message to agent");
-
-        let chat = self.chats.get_current_chat().unwrap().borrow_mut();
-        let store_chat_tx = chat.messages_update_sender.clone();
-        std::thread::spawn(move || {
-            match rx.recv() {
-                Ok(response) => {
-                    println!("Received response from agent: {}", response);
-                    let _ = store_chat_tx.send(ChatTokenArrivalAction::MaeResult(
-                        response.clone(),
-                        agent.clone(),
-                    ));
-                    let _ = store_chat_tx.send(ChatTokenArrivalAction::StreamingDone);
-                    SignalToUI::set_ui_signal();
-                }
-                Err(e) => {
-                    println!("Error receiving response from agent: {:?}", e);
-                }
-            }
-        });
     }
 
     pub fn load_model(&mut self, file: &File) {
@@ -167,6 +136,21 @@ impl Store {
                 );
                 chat.save();
             }
+        }
+    }
+
+    pub fn agents_list(&self) -> Vec<MaeAgent> {
+        MaeBackend::available_agents()
+    }
+
+    pub fn send_agent_message(&self, agent: MaeAgent, prompt: String) {
+        if let Some(mut chat) = self.chats.get_current_chat().map(|c| c.borrow_mut()) {
+            chat.send_message_to_agent(
+                agent,
+                prompt,
+                &self.mae_backend,
+            );
+            chat.save();
         }
     }
 
