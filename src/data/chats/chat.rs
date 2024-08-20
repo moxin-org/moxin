@@ -419,22 +419,8 @@ impl Chat {
                     self.receiving_response = false;
                 }
                 ChatMessageAction::MaeAgentResult(response, agent) => {
-                    match agent {
-                        MaeAgent::Questioner => {
-                            let response =
-                                serde_json::from_str::<MaeResponseQuestioner>(&response).unwrap();
-
-                            let last = self.messages.last_mut().unwrap();
-                            last.content.push_str(&response.result);
-                        }
-                        MaeAgent::WebSearch => {
-                            let response =
-                                serde_json::from_str::<MaeResponseWebSearch>(&response).unwrap();
-
-                            let last = self.messages.last_mut().unwrap();
-                            last.content.push_str(response.result["web_search_results"].as_str().unwrap());
-                        }
-                    }
+                    let last = self.messages.last_mut().unwrap();
+                    last.content.push_str(&response);
                     self.receiving_response = false;
                 }
             }
