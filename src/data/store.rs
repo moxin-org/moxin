@@ -47,7 +47,7 @@ pub struct Store {
     /// communicate with the backend thread.
     pub backend: Rc<Backend>,
 
-    pub mae_backend: Rc<MaeBackend>,
+    pub mae_backend: MaeBackend,
 
     pub search: Search,
     pub downloads: Downloads,
@@ -73,10 +73,11 @@ impl Store {
         ));
 
         let mae_backend = MaeBackend::new();
+        //let mae_backend = MaeBackend::new_fake();
 
         let mut store = Self {
             backend: backend.clone(),
-            mae_backend: Rc::new(mae_backend),
+            mae_backend: mae_backend,
 
             search: Search::new(backend.clone()),
             downloads: Downloads::new(backend.clone()),

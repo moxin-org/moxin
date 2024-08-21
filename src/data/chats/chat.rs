@@ -405,7 +405,7 @@ impl Chat {
                 ChatMessageAction::ModelStreamingDone => {
                     self.receiving_response = false;
                 }
-                ChatMessageAction::MaeAgentResult(response, agent) => {
+                ChatMessageAction::MaeAgentResult(response, _agent) => {
                     let last = self.messages.last_mut().unwrap();
                     last.content.push_str(&response);
                     self.receiving_response = false;
