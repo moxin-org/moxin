@@ -10,7 +10,6 @@ use std::path::PathBuf;
 use std::sync::mpsc::{self, channel, Receiver, Sender};
 use std::thread;
 use serde::{Deserialize, Serialize};
-use moxin_mae::{MaeResponseQuestioner, MaeResponseWebSearch};
 
 use crate::data::filesystem::{read_from_file, write_to_file};
 
@@ -375,22 +374,10 @@ impl Chat {
             match rx.recv() {
                 Ok(response) => {
                     println!("Received response from agent: {:?}", response);
-                    match response {
-                        MaeAgentResponse::QuestionerResponse(response) => {
-                            let _ = store_chat_tx.send(ChatMessageAction::MaeAgentResult(
-                                response.result,
-                                agent.clone(),
-                            ));
-                        },
-                        MaeAgentResponse::WebSearchResponse(response) => {
-                            // TODO Take care of the full response.
-                            // We may want to generate a markdown text based on the other fields.
-                            let _ = store_chat_tx.send(ChatMessageAction::MaeAgentResult(
-                                response.result["web_search_results"].as_str().unwrap().to_string(),
-                                agent.clone(),
-                            ));
-                        },
-                    }
+                    let _ = store_chat_tx.send(ChatMessageAction::MaeAgentResult(
+                        response.to_text_messgae(),
+                        agent.clone(),
+                    ));
                     SignalToUI::set_ui_signal();
                 }
                 Err(e) => {
@@ -449,5 +436,28 @@ impl Chat {
 
     pub fn update_accessed_at(&mut self) {
         self.accessed_at = chrono::Utc::now();
+    }
+}
+
+trait MaeAgentResponseFormatter {
+    fn to_text_messgae(&self) -> String;
+}
+
+impl MaeAgentResponseFormatter for MaeAgentResponse {
+    fn to_text_messgae(&self) -> String {
+        match self {
+            MaeAgentResponse::QuestionerResponse(response) => response.result.clone(),
+            MaeAgentResponse::WebSearchResponse(response) => {
+                let mut formatted = format!("{}\n\n",response.result.web_search_results);
+
+                let resouces_list = response.result.web_search_resource.iter().enumerate().map(|(i, r)| {
+                    format!("{}- [{}]({})\n", i + 1, r.name.replace("[", "\\[").replace("]", "\\]"), r.url)
+                }).collect::<Vec<String>>().join("\n\n");
+
+                formatted.push_str(&resouces_list);
+
+                formatted
+            }
+        }
     }
 }
