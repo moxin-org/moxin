@@ -783,7 +783,7 @@ impl ChatPanel {
             //store.send_chat_message(prompt.clone());
 
             // MAE
-            store.send_agent_message(MaeAgent::Questioner, prompt.clone());
+            store.send_agent_message(MaeAgent::WebSearch, prompt.clone());
 
             let prompt_input = self.text_input(id!(main_prompt_input.prompt));
             prompt_input.set_text_and_redraw(cx, "");

@@ -4,10 +4,7 @@ use dora_node_api::{
     dora_core::config::{DataId, NodeId},
     DoraNode, Event, MetadataParameters,
 };
-use eyre::Context;
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use std::collections::HashMap;
+use serde::{Deserialize, Deserializer, Serialize};
 use std::sync::mpsc::{self, channel};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -17,9 +14,33 @@ pub struct MaeResponseQuestioner {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct MaeResponseWebSearchResource {
+    pub name: String,
+    pub url: String,
+    pub snippet: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MaeResponseWebSearchResult {
+    pub web_search_results: String,
+    #[serde(deserialize_with = "parse_web_search_resource")]
+    pub web_search_resource: Vec<MaeResponseWebSearchResource>,
+}
+
+fn parse_web_search_resource<'de, D>(deserializer: D) -> Result<Vec<MaeResponseWebSearchResource>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = Deserialize::deserialize(deserializer)?;
+    let resources: Vec<MaeResponseWebSearchResource> = serde_json::from_str(&s).map_err(serde::de::Error::custom)?;
+
+    Ok(resources)
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct MaeResponseWebSearch {
     pub task: String,
-    pub result: HashMap<String, Value>,
+    pub result: MaeResponseWebSearchResult,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -92,14 +113,14 @@ impl MaeBackend {
         let Ok((_node, mut events)) =
             DoraNode::init_from_node_id(NodeId::from("reasoner_output_moxin".to_string()))
         else {
-            eprint!("Failed to initialize node: reasoner_output_moxin");
+            eprintln!("Failed to initialize node: reasoner_output_moxin");
             return;
         };
 
         let Ok((mut node, _events)) =
             DoraNode::init_from_node_id(NodeId::from("reasoner_task_input".to_string()))
         else {
-            eprint!("Failed to initialize node: reasoner_task_input");
+            eprintln!("Failed to initialize node: reasoner_task_input");
             return;
         };
 
@@ -126,11 +147,8 @@ impl MaeBackend {
                 }
             }
 
-            dbg!(&sender_to_frontend, &current_agent);
-
             // Listen for events from reasoner to send the response to frontend
             '_while: while let Some(event) = events.recv() {
-                dbg!(&event);
                 match event {
                     Event::Input {
                         id,
@@ -144,7 +162,6 @@ impl MaeBackend {
 
                                 let parsed =
                                     current_agent.parse_response(received_string.to_string());
-                                dbg!(&parsed);
                                 sender_to_frontend
                                     .send(parsed)
                                     .expect("failed to send command");
