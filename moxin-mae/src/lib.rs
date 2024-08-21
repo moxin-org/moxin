@@ -27,12 +27,15 @@ pub struct MaeResponseWebSearchResult {
     pub web_search_resource: Vec<MaeResponseWebSearchResource>,
 }
 
-fn parse_web_search_resource<'de, D>(deserializer: D) -> Result<Vec<MaeResponseWebSearchResource>, D::Error>
+fn parse_web_search_resource<'de, D>(
+    deserializer: D,
+) -> Result<Vec<MaeResponseWebSearchResource>, D::Error>
 where
     D: Deserializer<'de>,
 {
     let s: String = Deserialize::deserialize(deserializer)?;
-    let resources: Vec<MaeResponseWebSearchResource> = serde_json::from_str(&s).map_err(serde::de::Error::custom)?;
+    let resources: Vec<MaeResponseWebSearchResource> =
+        serde_json::from_str(&s).map_err(serde::de::Error::custom)?;
 
     Ok(resources)
 }
@@ -178,5 +181,46 @@ impl MaeBackend {
                 }
             }
         }
+    }
+
+    // For testing purposes
+    pub fn new_fake() -> Self {
+        let (command_sender, command_receiver) = channel();
+        let backend = Self { command_sender };
+
+        std::thread::spawn(move || {
+            loop {
+                // Receive command from frontend
+                match command_receiver.recv().unwrap() {
+                    MaeAgentCommand::SendTask(task, agent, tx) => match agent {
+                        MaeAgent::Questioner => {
+                            let response = MaeResponseQuestioner {
+                                task: task.clone(),
+                                result: "This is a fake response".to_string(),
+                            };
+                            tx.send(MaeAgentResponse::QuestionerResponse(response))
+                                .expect("failed to send command");
+                        }
+                        MaeAgent::WebSearch => {
+                            let response = MaeResponseWebSearch {
+                                task: task.clone(),
+                                result: MaeResponseWebSearchResult {
+                                    web_search_results: "This is a fake response".to_string(),
+                                    web_search_resource: vec![MaeResponseWebSearchResource {
+                                        name: "Fake resource".to_string(),
+                                        url: "https://fake.com".to_string(),
+                                        snippet: "This is a fake snippet".to_string(),
+                                    }],
+                                },
+                            };
+                            tx.send(MaeAgentResponse::WebSearchResponse(response))
+                                .expect("failed to send command");
+                        }
+                    },
+                }
+            }
+        });
+
+        backend
     }
 }
