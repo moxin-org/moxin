@@ -5,7 +5,7 @@ use dora_node_api::{
     DoraNode, Event, MetadataParameters,
 };
 use serde::{Deserialize, Deserializer, Serialize};
-use std::sync::mpsc::{self, channel};
+use std::{collections::HashMap, sync::mpsc::{self, channel}};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MaeResponseQuestioner {
@@ -101,18 +101,25 @@ impl MaeBackend {
         vec![MaeAgent::Questioner, MaeAgent::WebSearch]
     }
 
-    pub fn new() -> Self {
+    pub fn new(options: HashMap<String, String>) -> Self {
         let (command_sender, command_receiver) = channel();
         let backend = Self { command_sender };
 
         std::thread::spawn(move || {
-            Self::main_loop(command_receiver);
+            Self::main_loop(command_receiver, options);
         });
 
         backend
     }
 
-    pub fn main_loop(command_receiver: mpsc::Receiver<MaeAgentCommand>) {
+    pub fn main_loop(command_receiver: mpsc::Receiver<MaeAgentCommand>, options: HashMap<String, String>) {
+        let Ok((mut node, _events)) =
+            DoraNode::init_from_node_id(NodeId::from("reasoner_task_input".to_string()))
+        else {
+            eprintln!("Failed to initialize node: reasoner_task_input");
+            return;
+        };
+
         let Ok((_node, mut events)) =
             DoraNode::init_from_node_id(NodeId::from("reasoner_output_moxin".to_string()))
         else {
@@ -120,12 +127,7 @@ impl MaeBackend {
             return;
         };
 
-        let Ok((mut node, _events)) =
-            DoraNode::init_from_node_id(NodeId::from("reasoner_task_input".to_string()))
-        else {
-            eprintln!("Failed to initialize node: reasoner_task_input");
-            return;
-        };
+        dbg!("MAE backend started");
 
         loop {
             let sender_to_frontend: mpsc::Sender<MaeAgentResponse>;
@@ -134,9 +136,17 @@ impl MaeBackend {
             // Receive command from frontend
             match command_receiver.recv().unwrap() {
                 MaeAgentCommand::SendTask(task, agent, tx) => {
-                    // TODO Improve how we send the task prompt and the agent file
+                    // Information sent to MAE agent goes in the form of an array
+                    // It contains:
+                    // 1. The task to be performed (user prompt)
+                    // 2. The definition file of the agent
+                    // 3. A hash map of options encoded in JSON format
                     let data =
-                        StringArray::from(vec![task.trim().to_string(), agent.definition_file()]);
+                        StringArray::from(vec![
+                            task.trim().to_string(),
+                            agent.definition_file(),
+                            serde_json::to_string(&options).unwrap(),
+                        ]);
 
                     node.send_output(
                         DataId::from("reasoner_task".to_string()),

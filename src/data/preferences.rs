@@ -13,6 +13,9 @@ pub struct Preferences {
     pub current_chat_model: Option<FileID>,
     #[serde(default)]
     pub downloaded_files_dir: PathBuf,
+
+    pub open_ai_api_key: Option<String>,
+    pub serper_api_key: Option<String>,
 }
 
 impl Preferences {
@@ -33,6 +36,8 @@ impl Preferences {
             Self {
                 current_chat_model: None,
                 downloaded_files_dir: setup_model_downloads_folder(),
+                open_ai_api_key: None,
+                serper_api_key: None,
             }
         }
 

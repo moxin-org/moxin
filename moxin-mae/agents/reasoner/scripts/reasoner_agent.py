@@ -22,16 +22,21 @@ class Operator:
                 
                 task_inputs = dora_event["value"][0].as_py()
                 agent_file = dora_event["value"][1].as_py()
+                config_values = json.loads(dora_event["value"][2].as_py())
 
-                print(f'config:   {task_inputs}')
                 if isinstance(task_inputs, dict):
                     task = task_inputs.get('task', None)
                 else: task = task_inputs
                 
-                #yaml_file_path = get_relative_path(current_file=__file__, sibling_directory_name='configs', target_file_name='reasoner_agent.yml')
+                # Load agent config based on the `agent_file` parameter coming from Moxin
                 yaml_file_path = get_relative_path(current_file=__file__, sibling_directory_name='configs', target_file_name=agent_file)
-                
                 inputs = load_agent_config(yaml_file_path)
+
+                # Use provided API key that comes from Moxin
+                inputs['model_api_key'] = config_values["model_api_key"]
+                if 'serper_api_key' in inputs.keys():
+                    inputs['serper_api_key'] = config_values["serper_api_key"]
+
                 if inputs.get('check_log_prompt', None) is True:
                     log_config = {}
                     agent_config =  read_yaml(yaml_file_path).get('AGENT', '')
