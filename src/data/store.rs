@@ -9,6 +9,7 @@ use makepad_widgets::{DefaultNone, SignalToUI};
 use moxin_backend::Backend;
 use moxin_mae::{MaeAgent, MaeBackend};
 use moxin_protocol::data::{Author, DownloadedFile, File, FileID, Model, ModelID, PendingDownload};
+use std::collections::HashMap;
 use std::rc::Rc;
 
 pub const DEFAULT_MAX_DOWNLOAD_THREADS: usize = 3;
@@ -72,7 +73,15 @@ impl Store {
             DEFAULT_MAX_DOWNLOAD_THREADS,
         ));
 
-        let mae_backend = MaeBackend::new();
+        let mut options: HashMap<String, String> = HashMap::new();
+        if let Some(api_key) = &preferences.open_ai_api_key {
+            options.insert("model_api_key".to_string(), api_key.to_string());
+        }
+        if let Some(api_key) = &preferences.serper_api_key {
+            options.insert("serper_api_key".to_string(), api_key.to_string());
+        }
+
+        let mae_backend = MaeBackend::new(options);
         //let mae_backend = MaeBackend::new_fake();
 
         let mut store = Self {
@@ -146,11 +155,7 @@ impl Store {
 
     pub fn send_agent_message(&self, agent: MaeAgent, prompt: String) {
         if let Some(mut chat) = self.chats.get_current_chat().map(|c| c.borrow_mut()) {
-            chat.send_message_to_agent(
-                agent,
-                prompt,
-                &self.mae_backend,
-            );
+            chat.send_message_to_agent(agent, prompt, &self.mae_backend);
             chat.save();
         }
     }
