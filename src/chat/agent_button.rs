@@ -1,4 +1,7 @@
 use makepad_widgets::*;
+use moxin_mae::MaeAgent;
+
+use super::prompt_input::PromptInputAction;
 
 live_design!(
     import makepad_widgets::base::*;
@@ -33,11 +36,20 @@ live_design!(
 pub struct AgentButton {
     #[deref]
     deref: View,
+
+    #[rust]
+    agent: Option<MaeAgent>,
 }
 
 impl Widget for AgentButton {
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
         self.deref.handle_event(cx, event, scope);
+
+        if let Event::Actions(actions) = event {
+            if self.button(id!(button)).clicked(actions) {
+                cx.action(PromptInputAction::AgentSelected(self.agent.unwrap()))
+            }
+        }
     }
 
     fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, walk: Walk) -> DrawStep {
@@ -50,15 +62,16 @@ impl Widget for AgentButton {
 }
 
 impl AgentButton {
-    pub fn clicked(&mut self, actions: &Actions) -> bool {
-        self.button(id!(button)).clicked(actions)
+    pub fn set_agent(&mut self, agent: MaeAgent) {
+        self.set_text(&agent.name());
+        self.agent = Some(agent);
     }
 }
 
 impl AgentButtonRef {
-    pub fn clicked(&mut self, actions: &Actions) -> bool {
-        self.borrow_mut()
-            .map(|mut inner| inner.clicked(actions))
-            .unwrap_or(false)
+    pub fn set_agent(&mut self, agent: MaeAgent) {
+        if let Some(mut inner) = self.borrow_mut() {
+            inner.set_agent(agent);
+        }
     }
 }

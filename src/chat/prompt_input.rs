@@ -1,8 +1,15 @@
 use makepad_widgets::*;
 use moxin_mae::{MaeAgent, MaeBackend};
 
-use super::agent_button::AgentButtonWidgetRefExt;
 use crate::shared::computed_list::ComputedListWidgetExt;
+
+use super::agent_button::AgentButtonWidgetRefExt;
+
+#[derive(Debug, DefaultNone)]
+pub enum PromptInputAction {
+    AgentSelected(MaeAgent),
+    None,
+}
 
 live_design! {
     import makepad_widgets::base::*;
@@ -203,19 +210,14 @@ impl Widget for PromptInput {
                 self.on_agent_deselected();
             }
 
-            let selected_agent = self
-                .computed_list(id!(agent_autocomplete.list))
-                .borrow()
-                .map(|inner| {
-                    inner
-                        .items()
-                        .position(|widget| widget.as_agent_button().clicked(actions))
-                })
-                .flatten();
-
-            if let Some(idx) = selected_agent {
-                let agents = MaeBackend::available_agents();
-                self.on_agent_selected(&agents[idx]);
+            if let Some(action) = actions
+                .iter()
+                .find_map(|a| a.downcast_ref::<PromptInputAction>())
+            {
+                match action {
+                    PromptInputAction::AgentSelected(agent) => self.on_agent_selected(agent),
+                    PromptInputAction::None => {}
+                }
             }
         }
     }
@@ -258,7 +260,7 @@ impl LiveHook for PromptInput {
         let list = self.computed_list(id!(agent_autocomplete.list));
         list.compute_from(MaeBackend::available_agents().iter(), |agent| {
             let widget = WidgetRef::new_from_ptr(cx, self.agent_template);
-            widget.set_text(&agent.name());
+            widget.as_agent_button().set_agent(*agent);
             widget
         });
         list.redraw(cx);
