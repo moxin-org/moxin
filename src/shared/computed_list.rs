@@ -52,11 +52,6 @@ impl ComputedList {
     ) {
         self.items = iter.map(f).collect();
     }
-
-    /// Iterate over the current items/widgets.
-    pub fn items(&self) -> impl Iterator<Item = &WidgetRef> {
-        self.items.iter()
-    }
 }
 
 impl ComputedListRef {
