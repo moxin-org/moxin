@@ -1,7 +1,8 @@
 use makepad_widgets::*;
 use moxin_mae::{MaeAgent, MaeBackend};
 
-use crate::{data::store::Store, shared::computed_list::ComputedListWidgetExt};
+use super::agent_button::AgentButtonWidgetRefExt;
+use crate::shared::computed_list::ComputedListWidgetExt;
 
 live_design! {
     import makepad_widgets::base::*;
@@ -193,8 +194,6 @@ impl Widget for PromptInput {
             }
         }
 
-        let store = scope.data.get::<Store>().unwrap();
-
         if let Event::Actions(actions) = event {
             if let Some(current) = self.text_input(id!(prompt)).changed(actions) {
                 self.on_prompt_changed(current);
@@ -204,14 +203,20 @@ impl Widget for PromptInput {
                 self.on_agent_deselect();
             }
 
-            /*self.portal_list(id!(agent_autocomplete.list))
-            .items_with_actions(actions)
-            .iter()
-            .for_each(|(idx, widget)| {
-                if widget.as_button().clicked(actions) {
-                    self.on_agent_invoked(&store.downloads.agents[*idx]);
-                }
-            });*/
+            let selected_agent = self
+                .computed_list(id!(agent_autocomplete.list))
+                .borrow()
+                .map(|inner| {
+                    inner
+                        .items()
+                        .position(|widget| widget.as_agent_button().clicked(actions))
+                })
+                .flatten();
+
+            if let Some(idx) = selected_agent {
+                let agents = MaeBackend::available_agents();
+                self.on_agent_invoked(&agents[idx]);
+            }
         }
     }
 }
