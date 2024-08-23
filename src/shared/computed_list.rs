@@ -44,7 +44,7 @@ impl Widget for ComputedList {
 }
 
 impl ComputedList {
-    /// Build each widget from mapped from your data.
+    /// Build each widget mapping them from your data.
     pub fn compute_from<T, I: Iterator<Item = T>>(
         &mut self,
         iter: I,
