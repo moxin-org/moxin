@@ -6,11 +6,12 @@ use crate::{data::store::Store, shared::computed_list::ComputedListWidgetExt};
 live_design! {
     import makepad_widgets::base::*;
     import makepad_widgets::theme_desktop_dark::*;
+    import makepad_draw::shader::std::*;
 
     import crate::shared::styles::*;
     import crate::shared::widgets::*;
     import crate::shared::computed_list::*;
-    import makepad_draw::shader::std::*;
+    import crate::chat::agent_button::*;
 
     ICON_PROMPT = dep("crate://self/resources/icons/prompt.svg")
     ICON_STOP = dep("crate://self/resources/icons/stop.svg")
@@ -40,26 +41,7 @@ live_design! {
 
     PromptInput = {{PromptInput}} {
         flow: Overlay,
-
-        agent_template: <MoxinButton> {
-            flow: Right,
-            align: {x: 0.0, y: 0.5},
-            padding: 5.0
-            width: Fill,
-            height: Fit,
-            draw_text: {
-                fn get_color(self) -> vec4 {
-                    return #000;
-                }
-            }
-            icon_walk: {margin: { top: -1 }, width: 21, height: 21},
-            draw_icon: {
-                svg_file: (ICON_STOP),
-                fn get_color(self) -> vec4 {
-                    return #475467;
-                }
-            }
-        }
+        agent_template: <AgentButton> {}
 
         <View> {
             flow: Down,

@@ -1,3 +1,4 @@
+pub mod agent_button;
 pub mod chat_history;
 pub mod chat_history_card;
 pub mod chat_history_card_options;
@@ -17,6 +18,7 @@ pub mod shared;
 use makepad_widgets::Cx;
 
 pub fn live_design(cx: &mut Cx) {
+    agent_button::live_design(cx);
     prompt_input::live_design(cx);
     chat_history_card::live_design(cx);
     chat_history::live_design(cx);
