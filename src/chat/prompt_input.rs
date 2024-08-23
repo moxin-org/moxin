@@ -172,7 +172,7 @@ live_design! {
 }
 
 #[derive(Widget, Live)]
-struct PromptInput {
+pub struct PromptInput {
     #[deref]
     deref: View,
 
@@ -184,7 +184,7 @@ struct PromptInput {
     prev_prompt: String,
 
     #[rust]
-    agent_selected: Option<MaeAgent>,
+    pub agent_selected: Option<MaeAgent>,
 }
 
 impl Widget for PromptInput {
