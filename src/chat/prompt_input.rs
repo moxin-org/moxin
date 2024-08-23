@@ -93,35 +93,49 @@ live_design! {
                 selected_agent_bubble = <RoundedView> {
                     visible: false,
                     flow: Right,
-                    width: Fill,
+                    width: Fit,
                     height: Fit,
+                    align: {y: 0.5},
                     margin: 5.0
-                    padding: 10.0
+                    padding: {left: 10, right: 10, top: 8, bottom: 8}
                     show_bg: true,
                     draw_bg: {
                         color: #F2F4F7,
                         radius: 10.0,
                     }
-                    selected_agent_label = <Label> {
+                    <Image> {
+                        width: 20,
+                        height: 20,
+                        margin: {right: 8}
+                        source: dep("crate://self/resources/images/agent.png"),
+                    }
+                    <Label> {
+                        text: "Chat with "
                         draw_text: {
-                            text_style: <REGULAR_FONT>{font_size: 10},
-                            color: #79818f
+                            text_style: <REGULAR_FONT>{font_size: 8},
+                            color: #475467
                         }
                     }
-                    <View> {width: Fill}
+                    selected_agent_label = <Label> {
+                        margin: {right: 4},
+                        draw_text: {
+                            text_style: <BOLD_FONT>{font_size: 8},
+                            color: #000
+                        }
+                    }
                     agent_deselect_button = <MoxinButton> {
-                        width: 14,
-                        height: 14,
+                        width: 8,
+                        height: 8,
                         padding: 0,
                         draw_bg: {
                             color: #00000000,
                             color_hover: #00000000,
                             border_color_hover: #00000000,
                         }
-                        icon_walk: {width: 14, height: 14}
+                        icon_walk: {width: 8, height: 8}
                         draw_icon: {
                             svg_file: dep("crate://self/resources/icons/close.svg"),
-                            color: #9098A3
+                            color: #475467
                         }
                     }
                 }
