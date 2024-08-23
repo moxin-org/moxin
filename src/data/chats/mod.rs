@@ -22,6 +22,7 @@ pub struct Chats {
 
     current_chat_id: Option<ChatID>,
     chats_dir: PathBuf,
+    pub current_agent_id: Option<u64>,
 }
 
 impl Chats {
@@ -33,6 +34,7 @@ impl Chats {
             loaded_model: None,
             model_loader: ModelLoader::new(),
             chats_dir: setup_chats_folder(),
+            current_agent_id: None,
         }
     }
 

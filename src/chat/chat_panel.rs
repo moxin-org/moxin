@@ -29,9 +29,8 @@ live_design! {
     import crate::chat::model_selector::ModelSelector;
     import crate::chat::chat_line::ChatLine;
     import crate::chat::shared::ChatAgentAvatar;
+    import crate::chat::prompt_input::PromptInput;
 
-    ICON_PROMPT = dep("crate://self/resources/icons/prompt.svg")
-    ICON_STOP = dep("crate://self/resources/icons/stop.svg")
     ICON_JUMP_TO_BOTTOM = dep("crate://self/resources/icons/jump_to_bottom.svg")
 
     CircleButton = <MoxinButton> {
@@ -183,75 +182,6 @@ live_design! {
         }
     }
 
-    PromptButton = <CircleButton> {
-        width: 28,
-        height: 28,
-
-        draw_bg: {
-            radius: 6.5,
-            color: #D0D5DD
-        }
-        icon_walk: {
-            margin: {top: 0, left: -4},
-        }
-    }
-
-    ChatPromptInput = <RoundedView> {
-        width: Fill,
-        height: Fit,
-
-        show_bg: true,
-        draw_bg: {
-            color: #fff
-        }
-
-        padding: {top: 6, bottom: 6, left: 4, right: 10}
-
-        spacing: 4,
-        align: {x: 0.0, y: 1.0},
-
-        draw_bg: {
-            radius: 10.0,
-            border_color: #D0D5DD,
-            border_width: 1.0,
-        }
-
-        prompt = <MoxinTextInput> {
-            width: Fill,
-            height: Fit,
-
-            empty_message: "Enter a message"
-            draw_bg: {
-                radius: 30.0
-                color: #fff
-            }
-            draw_label: {
-                text_style:<REGULAR_FONT>{font_size: 10},
-
-                instance prompt_enabled: 0.0
-                fn get_color(self) -> vec4 {
-                    return mix(
-                        #98A2B3,
-                        #000,
-                        self.prompt_enabled
-                    )
-                }
-            }
-        }
-
-        prompt_send_button = <PromptButton> {
-            draw_icon: {
-                svg_file: (ICON_PROMPT),
-            }
-        }
-
-        prompt_stop_button = <PromptButton> {
-            draw_icon: {
-                svg_file: (ICON_STOP),
-            }
-        }
-    }
-
     ChatPanel = {{ChatPanel}} {
         flow: Overlay
         width: Fill
@@ -312,7 +242,7 @@ live_design! {
                     width: Fill, height: Fit
                     flow: Down,
                     align: {x: 0.5, y: 0.5},
-                    no_downloaded_model_prompt_input = <ChatPromptInput> {}
+                    no_downloaded_model_prompt_input = <PromptInput> {}
                 }
 
             }
@@ -353,7 +283,7 @@ live_design! {
                     width: Fill, height: Fit
                     flow: Down,
                     align: {x: 0.5, y: 0.5},
-                    no_model_prompt_input = <ChatPromptInput> {}
+                    no_model_prompt_input = <PromptInput> {}
                 }
 
             }
@@ -386,29 +316,25 @@ live_design! {
 
                 margin: { top: 86 }
                 spacing: 4,
-                flow: Down,
+                flow: Overlay,
 
-                <View> {
+                chat = <PortalList> {
+                    margin: {bottom: 50}
+                    scroll_bar: {
+                        bar_size: 0.0,
+                    }
                     width: Fill,
                     height: Fill,
 
-                    flow: Overlay
-                    chat = <PortalList> {
-                        scroll_bar: {
-                            bar_size: 0.0,
-                        }
-                        width: Fill,
-                        height: Fill,
+                    drag_scrolling: false,
 
-                        drag_scrolling: false,
-
-                        UserChatLine = <UserChatLine> {}
-                        ModelChatLine = <ModelChatLine> {}
-                        EndOfChat = <View> {height: 0.1}
-                    }
+                    UserChatLine = <UserChatLine> {}
+                    ModelChatLine = <ModelChatLine> {}
+                    EndOfChat = <View> {height: 0.1}
                 }
 
-                main_prompt_input = <ChatPromptInput> {}
+
+                main_prompt_input = <PromptInput> {}
             }
 
             model_selector = <ModelSelector> {}
@@ -499,9 +425,14 @@ impl Widget for ChatPanel {
             prompt_input.set_key_focus(cx);
         }
 
+        let message_list_uid = self.portal_list(id!(chat)).widget_uid();
         while let Some(view_item) = self.view.draw_walk(cx, scope, walk).step() {
-            if let Some(mut list) = view_item.as_portal_list().borrow_mut() {
-                self.draw_messages(cx, scope, &mut list);
+            if view_item.widget_uid() == message_list_uid {
+                self.draw_messages(
+                    cx,
+                    scope,
+                    &mut view_item.as_portal_list().borrow_mut().unwrap(),
+                );
             }
         }
 
@@ -513,6 +444,17 @@ impl WidgetMatchEvent for ChatPanel {
     fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, scope: &mut Scope) {
         let widget_uid = self.widget_uid();
         let store = scope.data.get_mut::<Store>().unwrap();
+
+        self.portal_list(id!(agent_autocomplete.list))
+            .items_with_actions(actions)
+            .iter()
+            .map(|(_, widget)| widget.as_button())
+            .filter(|button: &ButtonRef| button.borrow().is_some())
+            .for_each(|button| {
+                if button.clicked(actions) {
+                    println!("Clicked");
+                }
+            });
 
         for action in actions
             .iter()
@@ -589,7 +531,8 @@ impl WidgetMatchEvent for ChatPanel {
                 self.handle_prompt_input_actions(cx, actions, scope);
             }
             State::ModelSelectedWithChat {
-                receiving_response: true, ..
+                receiving_response: true,
+                ..
             } => {
                 if self
                     .button(id!(main_prompt_input.prompt_stop_button))
@@ -657,7 +600,8 @@ impl ChatPanel {
                 self.activate_prompt_input(cx, PromptInputMode::Enabled, PromptInputButton::Send);
             }
             State::ModelSelectedWithChat {
-                receiving_response: true, ..
+                receiving_response: true,
+                ..
             } => {
                 self.activate_prompt_input(cx, PromptInputMode::Disabled, PromptInputButton::Stop);
             }
