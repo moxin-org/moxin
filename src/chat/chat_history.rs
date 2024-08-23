@@ -34,21 +34,24 @@ live_design! {
                     padding: { left: 25, right: 25, bottom: 58 }
 
                     list = <PortalList> {
-                        Agent = <MoxinButton> {
-                            flow: Right,
+                        Agent = <View> {
+                            flow: Overlay,
                             align: {x: 0.0, y: 0.5},
-                            padding: 15.0
-                            width: Fill,
-                            draw_text: {
-                                fn get_color(self) -> vec4 {
-                                    return #000;
-                                }
+                            <Image> {
+                                width: 24,
+                                height: 24,
+                                margin: {left: 10},
+                                source: dep("crate://self/resources/images/agent.png")
                             }
-                            icon_walk: {margin: { top: -1 }, width: 21, height: 21},
-                            draw_icon: {
-                                svg_file: (ICON_NEW_CHAT),
-                                fn get_color(self) -> vec4 {
-                                    return #475467;
+                            button = <MoxinButton> {
+                                flow: Right,
+                                align: {x: 0.0, y: 0.5},
+                                padding: {left: 40, right: 15, top: 15, bottom: 15},
+                                width: Fill,
+                                draw_text: {
+                                    fn get_color(self) -> vec4 {
+                                        return #000;
+                                    }
                                 }
                             }
                         }
@@ -124,8 +127,8 @@ impl Widget for ChatHistory {
                 while let Some(item_id) = list.next_visible_item(cx) {
                     if item_id < agents_count {
                         let agent = &agents[item_id];
-                        let item = list.item(cx, item_id, live_id!(Agent)).unwrap().as_label();
-                        item.set_text(&agent.name());
+                        let item = list.item(cx, item_id, live_id!(Agent)).unwrap();
+                        item.button(id!(button)).set_text(&agent.name());
                         item.draw_all(cx, scope);
                         continue;
                     }

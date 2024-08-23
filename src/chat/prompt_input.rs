@@ -1,5 +1,5 @@
 use makepad_widgets::*;
-use moxin_mae::MaeBackend;
+use moxin_mae::{MaeAgent, MaeBackend};
 
 use crate::{data::store::Store, shared::computed_list::ComputedListWidgetExt};
 
@@ -194,7 +194,7 @@ struct PromptInput {
     prev_prompt: String,
 
     #[rust]
-    agent_invoked: Option<u64>,
+    agent_invoked: Option<MaeAgent>,
 }
 
 impl Widget for PromptInput {
@@ -251,11 +251,12 @@ impl PromptInput {
         agent_autocomplete.set_visible(false);
     }
 
-    fn on_agent_invoked(&mut self, agent: &Agent) {
-        self.agent_invoked = Some(agent.id);
+    fn on_agent_invoked(&mut self, agent: &MaeAgent) {
+        self.agent_invoked = Some(*agent);
         self.view(id!(agent_autocomplete)).set_visible(false);
         self.view(id!(selected_agent_bubble)).set_visible(true);
-        self.label(id!(selected_agent_label)).set_text(&agent.name);
+        self.label(id!(selected_agent_label))
+            .set_text(&agent.name());
         // TODO: Remove the inserted @
     }
 
