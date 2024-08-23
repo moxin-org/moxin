@@ -1,5 +1,4 @@
 use makepad_widgets::*;
-use moxin_mae::MaeAgent;
 use moxin_protocol::data::FileID;
 use std::cell::{Ref, RefCell, RefMut};
 
@@ -16,7 +15,7 @@ use crate::{
     shared::actions::ChatAction,
 };
 
-use super::chat_history_card::ChatHistoryCardAction;
+use super::{chat_history_card::ChatHistoryCardAction, prompt_input::PromptInputWidgetExt};
 
 live_design! {
     import makepad_widgets::base::*;
@@ -724,10 +723,17 @@ impl ChatPanel {
             } | State::ModelSelectedWithEmptyChat { is_loading: false }
         ) {
             let store = scope.data.get_mut::<Store>().unwrap();
-            //store.send_chat_message(prompt.clone());
 
-            // MAE
-            store.send_agent_message(MaeAgent::PapersResearch, prompt.clone());
+            if let Some(agent_selected) = self
+                .prompt_input(id!(main_prompt_input))
+                .borrow()
+                .unwrap()
+                .agent_selected
+            {
+                store.send_agent_message(agent_selected, prompt.clone());
+            } else {
+                store.send_chat_message(prompt.clone());
+            }
 
             let prompt_input = self.text_input(id!(main_prompt_input.prompt));
             prompt_input.set_text_and_redraw(cx, "");
