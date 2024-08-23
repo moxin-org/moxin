@@ -49,13 +49,14 @@ live_design! {
 
     PromptInput = {{PromptInput}} {
         flow: Overlay,
+        height: Fit,
         agent_template: <AgentButton> {}
 
         <View> {
             flow: Down,
-            align: {y: 1.0},
-
+            height: Fit,
             agent_autocomplete = <View> {
+                height: Fit,
                 visible: false,
                 align: {x: 0.5, y: 1.0},
                 margin: {bottom: 10},
