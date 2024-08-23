@@ -444,17 +444,6 @@ impl WidgetMatchEvent for ChatPanel {
         let widget_uid = self.widget_uid();
         let store = scope.data.get_mut::<Store>().unwrap();
 
-        self.portal_list(id!(agent_autocomplete.list))
-            .items_with_actions(actions)
-            .iter()
-            .map(|(_, widget)| widget.as_button())
-            .filter(|button: &ButtonRef| button.borrow().is_some())
-            .for_each(|button| {
-                if button.clicked(actions) {
-                    println!("Clicked");
-                }
-            });
-
         for action in actions
             .iter()
             .filter_map(|action| action.as_widget_action())
