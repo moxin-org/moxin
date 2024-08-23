@@ -11,11 +11,13 @@ pub mod model_info;
 pub mod model_selector;
 pub mod model_selector_list;
 pub mod model_selector_loading;
+pub mod prompt_input;
 pub mod shared;
 
 use makepad_widgets::Cx;
 
 pub fn live_design(cx: &mut Cx) {
+    prompt_input::live_design(cx);
     chat_history_card::live_design(cx);
     chat_history::live_design(cx);
     chat_line_loading::live_design(cx);

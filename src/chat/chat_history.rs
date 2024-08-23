@@ -1,6 +1,7 @@
 use super::chat_history_card::{ChatHistoryCardAction, ChatHistoryCardWidgetRefExt};
 use crate::data::store::Store;
 use makepad_widgets::*;
+use moxin_mae::MaeBackend;
 
 live_design! {
     import makepad_widgets::base::*;
@@ -33,6 +34,24 @@ live_design! {
                     padding: { left: 25, right: 25, bottom: 58 }
 
                     list = <PortalList> {
+                        Agent = <MoxinButton> {
+                            flow: Right,
+                            align: {x: 0.0, y: 0.5},
+                            padding: 15.0
+                            width: Fill,
+                            draw_text: {
+                                fn get_color(self) -> vec4 {
+                                    return #000;
+                                }
+                            }
+                            icon_walk: {margin: { top: -1 }, width: 21, height: 21},
+                            draw_icon: {
+                                svg_file: (ICON_NEW_CHAT),
+                                fn get_color(self) -> vec4 {
+                                    return #475467;
+                                }
+                            }
+                        }
                         ChatHistoryCard = <ChatHistoryCard> {
                             padding: {top: 20}
                             cursor: Default
@@ -83,30 +102,44 @@ impl Widget for ChatHistory {
     }
 
     fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, walk: Walk) -> DrawStep {
-        let chats = &scope.data.get::<Store>().unwrap().chats;
-
-        let mut saved_chat_ids = chats
+        let store = scope.data.get::<Store>().unwrap();
+        let agents = MaeBackend::available_agents();
+        let mut chat_ids = store
+            .chats
             .saved_chats
             .iter()
             .map(|c| c.borrow().id)
             .collect::<Vec<_>>();
 
         // Reverse sort chat ids.
-        saved_chat_ids.sort_by(|a, b| b.cmp(a));
+        chat_ids.sort_by(|a, b| b.cmp(a));
 
-        let chats_count = chats.saved_chats.len();
+        let agents_count = agents.len();
+        let chats_count = chat_ids.len();
+        let items_count = agents_count + chats_count;
 
         while let Some(view_item) = self.deref.draw_walk(cx, scope, walk).step() {
             if let Some(mut list) = view_item.as_portal_list().borrow_mut() {
-                list.set_item_range(cx, 0, chats_count);
+                list.set_item_range(cx, 0, items_count);
                 while let Some(item_id) = list.next_visible_item(cx) {
+                    if item_id < agents_count {
+                        let agent = &agents[item_id];
+                        let item = list.item(cx, item_id, live_id!(Agent)).unwrap().as_label();
+                        item.set_text(&agent.name());
+                        item.draw_all(cx, scope);
+                        continue;
+                    }
+
+                    let item_id = item_id - agents_count;
+
                     if item_id < chats_count {
                         let mut item = list
                             .item(cx, item_id, live_id!(ChatHistoryCard))
                             .unwrap()
                             .as_chat_history_card();
-                        let _ = item.set_chat_id(saved_chat_ids[item_id]);
+                        let _ = item.set_chat_id(chat_ids[item_id]);
                         item.draw_all(cx, scope);
+                        continue;
                     }
                 }
             }
