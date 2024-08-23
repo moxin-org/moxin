@@ -315,10 +315,10 @@ live_design! {
 
                 margin: { top: 86 }
                 spacing: 4,
-                flow: Overlay,
+                flow: Down,
 
                 chat = <PortalList> {
-                    margin: {bottom: 50}
+                    margin: { bottom: 15 }
                     scroll_bar: {
                         bar_size: 0.0,
                     }
