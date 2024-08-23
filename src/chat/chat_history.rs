@@ -13,6 +13,7 @@ live_design! {
 
     import crate::chat::shared::ChatAgentAvatar;
     import crate::chat::chat_history_card::ChatHistoryCard;
+    import crate::chat::agent_button::*;
 
     ICON_NEW_CHAT = dep("crate://self/resources/icons/new_chat.svg")
 
@@ -34,27 +35,7 @@ live_design! {
                     padding: { left: 25, right: 25, bottom: 58 }
 
                     list = <PortalList> {
-                        Agent = <View> {
-                            flow: Overlay,
-                            align: {x: 0.0, y: 0.5},
-                            <Image> {
-                                width: 24,
-                                height: 24,
-                                margin: {left: 10},
-                                source: dep("crate://self/resources/images/agent.png")
-                            }
-                            button = <MoxinButton> {
-                                flow: Right,
-                                align: {x: 0.0, y: 0.5},
-                                padding: {left: 40, right: 15, top: 15, bottom: 15},
-                                width: Fill,
-                                draw_text: {
-                                    fn get_color(self) -> vec4 {
-                                        return #000;
-                                    }
-                                }
-                            }
-                        }
+                        Agent = <AgentButton> {}
                         ChatHistoryCard = <ChatHistoryCard> {
                             padding: {top: 20}
                             cursor: Default
