@@ -177,7 +177,7 @@ struct PromptInput {
     prev_prompt: String,
 
     #[rust]
-    agent_invoked: Option<MaeAgent>,
+    agent_selected: Option<MaeAgent>,
 }
 
 impl Widget for PromptInput {
@@ -200,7 +200,7 @@ impl Widget for PromptInput {
             }
 
             if self.button(id!(agent_deselect_button)).clicked(actions) {
-                self.on_agent_deselect();
+                self.on_agent_deselected();
             }
 
             let selected_agent = self
@@ -215,7 +215,7 @@ impl Widget for PromptInput {
 
             if let Some(idx) = selected_agent {
                 let agents = MaeBackend::available_agents();
-                self.on_agent_invoked(&agents[idx]);
+                self.on_agent_selected(&agents[idx]);
             }
         }
     }
@@ -238,8 +238,8 @@ impl PromptInput {
         agent_autocomplete.set_visible(false);
     }
 
-    fn on_agent_invoked(&mut self, agent: &MaeAgent) {
-        self.agent_invoked = Some(*agent);
+    fn on_agent_selected(&mut self, agent: &MaeAgent) {
+        self.agent_selected = Some(*agent);
         self.view(id!(agent_autocomplete)).set_visible(false);
         self.view(id!(selected_agent_bubble)).set_visible(true);
         self.label(id!(selected_agent_label))
@@ -247,8 +247,8 @@ impl PromptInput {
         // TODO: Remove the inserted @
     }
 
-    fn on_agent_deselect(&mut self) {
-        self.agent_invoked = None;
+    fn on_agent_deselected(&mut self) {
+        self.agent_selected = None;
         self.view(id!(selected_agent_bubble)).set_visible(false);
     }
 }
