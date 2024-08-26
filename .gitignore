@@ -8,4 +8,5 @@ data.*
 .DS_Store
 moxin-mae/agents/**/data/**
 moxin-mae/agents/**/out/**
-moxin-mae/agents/**/scripts/__pycache__/**
+moxin-mae/agents/**/__pycache__/**
+moxin-mae/agents/paper/result/**

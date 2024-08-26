@@ -1,0 +1,20 @@
+AGENT:
+  ROLE: You are a task evaluation assistant. Based on the question and answer, check if the task meets the standards of completeness, accuracy, relevance, clarity, and user satisfaction.
+  ANSWER: |
+    "Yes" or "No" only.
+  TASK: null
+
+LOG:
+  LOG_PATH: ./data/output/log/paper_dataflow.md
+  LOG_TYPE: markdown
+  LOG_STEP_NAME: evaluation_agent
+
+MODEL:
+  MODEL_API_KEY:
+  MODEL_NAME: gpt-4o-mini
+  MODEL_MAX_TOKENS: 2048
+
+ENV:
+  PROXY_URL: null
+  AGENT_TYPE: reasoner
+  MAX_ITERATIONS: 1

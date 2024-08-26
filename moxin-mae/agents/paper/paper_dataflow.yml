@@ -1,0 +1,61 @@
+nodes:
+  - id: paper_task_input
+    path: dynamic
+    inputs:
+      direction: dora/timer/secs/1
+    outputs:
+      - task
+  - id: keyword_extractor
+    operator:
+      python: keyword_extractor.py
+      inputs:
+        task: paper_task_input/task
+      outputs:
+        - keywords
+  - id: paper_downloader_agent
+    operator:
+      python: paper_downloader_agent.py
+      inputs:
+        keywords: keyword_extractor/keywords
+      outputs:
+        - papers_info
+  - id: paper_analyze_agent
+    operator:
+      python: paper_analyze_agent.py
+      inputs:
+        papers_info: paper_downloader_agent/papers_info
+      outputs:
+        - paper_analyze_result
+  - id: report_writer_agent
+    operator:
+      python: report_writer_agent.py
+      inputs:
+        paper_analyze_result: paper_analyze_agent/paper_analyze_result
+      outputs:
+        - writer_report
+  - id: feedback_agent
+    operator:
+      python: feedback_agent.py
+      inputs:
+        writer_report: report_writer_agent/writer_report
+        evaluation_result: evaluation_agent/evaluation_result
+      outputs:
+        - feedback_result
+  - id: refinement_agent
+    operator:
+      python: refinement_agent.py
+      inputs:
+        feedback_result: feedback_agent/feedback_result
+      outputs:
+        - refinement_result
+  - id: evaluation_agent
+    operator:
+      python: evaluation_agent.py
+      inputs:
+        refinement_result: refinement_agent/refinement_result
+      outputs:
+        - evaluation_result
+  - id: paper_output_moxin
+    path: dynamic
+    inputs:
+      paper_result: refinement_agent/refinement_result

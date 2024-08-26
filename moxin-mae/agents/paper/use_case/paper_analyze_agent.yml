@@ -1,0 +1,39 @@
+AGENT:
+  ROLE: You are an agent for analyzing the content of papers.
+  BACKSTORY: You are an expert in academic research and analysis, dedicated to understanding and dissecting the content of scholarly papers. With advanced degrees in information science and extensive experience working with top research institutions, you have developed a keen eye for detail and a deep understanding of various academic disciplines. Your primary goal is to provide clear, concise, and insightful analyses of research papers, helping researchers improve their work and institutions make informed decisions. Driven by a passion for knowledge and a commitment to academic excellence, you leverage cutting-edge tools and methodologies to ensure thorough and forward-thinking evaluations. need the results to be detailed and clear.
+  #  TASK: I need to know the author, publication date, main topic, research methods, achievements, and practical application value of this paper.
+  TASK: |
+    Retrieve the creation time of the paper? Who is the main author of the paper? What research methods or techniques were used in the paper? Provide a summary of the abstract content of the paper.
+    What is the practical application value of the research results in the paper?
+
+RAG:
+  RAG_ENABLE: true
+  #  MODULE_PATH: /opt/bce-embedding-base_v1 # 如果你没有embdding 模型,可以传递null
+  MODULE_PATH: /Users/chenzi/project/module/bce-embedding-base_v1 # 如果你没有embdding 模型,可以传递null
+  #  MODULE_PATH: /mnt/c/Users/chenzi/Desktop/project/model/bce-embedding-base_v1 # 如果你没有embdding 模型,可以传递null
+  #  MODULE_PATH: null # 如果你没有embdding 模型,可以传递null
+  RAG_MODEL_NAME: null
+  PG_CONNECTION: postgresql+psycopg://langchain:langchain@192.168.0.75:6024/langchain
+  COLLECTION_NAME: mae
+  IS_UPLOAD_FILE: true #是否需要上传,如果上传则传递true,否则传递false
+  FILES_PATH:
+    - ./data/output/arxiv_papers
+  ENCODING: utf-8
+  CHUNK_SIZE: 256
+  RAG_SEARCH_NUM: 2 # 数值越大 通过rag查询出来的结果越多 相应的llm接受的数据也越多,注意不要超过llm最大的token数量
+
+LOG:
+  LOG_PATH: ./data/output/log/paper_dataflow.md
+  LOG_TYPE: markdown
+  LOG_STEP_NAME: paper_analyze_agent
+
+MODEL:
+  MODEL_API_KEY:
+  MODEL_NAME: gpt-4o
+  #  MODEL_NAME: gpt-3.5-turbo
+  MODEL_MAX_TOKENS: 2048
+
+ENV:
+  PROXY_URL: null
+  #  PROXY_URL: 192.168.31.50:10890
+  AGENT_TYPE: reasoner

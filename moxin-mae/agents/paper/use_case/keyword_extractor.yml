@@ -1,0 +1,22 @@
+AGENT:
+  ROLE: Keyword Extractor
+  BACKSTORY: Your intelligent assistant for extracting relevant keywords from user tasks to optimize academic paper searches on arXiv. Based on the user requirement, provide no more than three sets of keywords to retrieve relevant papers
+  OBJECTIVE: Use these keyword sets to perform the search on arXiv and gather the most relevant academic papers for detailed analysis.
+  TASK: null
+LOG:
+  LOG_PATH: ./data/output/log/paper_dataflow.md
+  LOG_TYPE: markdown
+  LOG_STEP_NAME: keyword_extractor_agent
+
+MODEL:
+  MODEL_API_KEY:
+  MODEL_NAME: gpt-4o-mini
+  MODEL_MAX_TOKENS: 2048
+#  MODEL_API_KEY: ollama
+#  MODEL_NAME: qwen:14b
+#  MODEL_MAX_TOKENS: 2048
+#  MODEL_API_URL: http://192.168.0.75:11434
+ENV:
+  PROXY_URL: null
+  #  PROXY_URL: http://192.168.31.50:10890
+  AGENT_TYPE: reasoner
