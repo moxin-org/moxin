@@ -34,7 +34,6 @@ class Operator:
                         write_agent_log(log_type=inputs.get('log_type', None),
                                         log_file_path=inputs.get('log_path', None),
                                         data=log_result)
-                        return DoraStatus.STOP
                     else:
                         print('inputs    :  ',inputs)
                         print("dora_result   :", dora_result)
@@ -51,15 +50,11 @@ class Operator:
                             write_agent_log(log_type=inputs.get('log_type', None),
                                             log_file_path=inputs.get('log_path', None),
                                             data=log_result)
-                            return DoraStatus.STOP
                         else:
                             inputs['local_iterations'] = local_iterations + 1
                             if inputs['local_iterations'] <= max_iterations :
                                 result = { 'context': dora_result.get('context'),'local_iterations':inputs['local_iterations'],'rag_data':dora_result['rag_data'],'task':dora_result['task']}
                                 send_output("evaluation_result", pa.array([json.dumps(result)]),dora_event['metadata'])
-                                return DoraStatus.CONTINUE
-                            else:
-                                return DoraStatus.STOP
                     # send_output("feedback_result", pa.array([json.dumps(result)]),dora_event['metadata'])  # add this line
         return DoraStatus.CONTINUE
 

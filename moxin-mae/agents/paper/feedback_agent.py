@@ -26,7 +26,7 @@ class Operator:
                 max_iterations,local_iterations = inputs.get('max_iterations'),writer_result.get('local_iterations', None)
 
                 if local_iterations!=1 and  max_iterations >= local_iterations :
-                    return DoraStatus.STOP
+                    return DoraStatus.CONTINUE
 
                 rag_data =  writer_result.get('rag_data',None)
                 print('inputs  :  ',inputs)

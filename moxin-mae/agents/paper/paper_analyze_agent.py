@@ -58,7 +58,6 @@ class Operator:
                 result_dict = {'task':paper_result.get('task'),'context':all_result}
                 print(result_dict)
                 send_output("paper_analyze_result", pa.array([json.dumps(result_dict)]),dora_event['metadata'])
-                return DoraStatus.STOP
         return DoraStatus.CONTINUE
 
 
