@@ -36,5 +36,4 @@ class Operator:
 
                 result_dict = {'task':keyword_result.get('task')}
                 send_output("papers_info", pa.array([json.dumps(result_dict)]),dora_event['metadata'])
-                return  DoraStatus.STOP
         return DoraStatus.CONTINUE

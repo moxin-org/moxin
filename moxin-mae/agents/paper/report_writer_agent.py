@@ -39,7 +39,6 @@ class Operator:
                 write_agent_log(log_type=inputs.get('log_type', None), log_file_path=inputs.get('log_path', None),
                                 data=log_result)
                 send_output("writer_report", pa.array([json.dumps(result)]),dora_event['metadata'])  # add this line
-                return DoraStatus.STOP
         return DoraStatus.CONTINUE
 
 
