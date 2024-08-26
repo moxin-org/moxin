@@ -58,4 +58,9 @@ nodes:
   - id: paper_output_moxin
     path: dynamic
     inputs:
+      keywords: keyword_extractor/keywords
+      papers_info: paper_downloader_agent/papers_info
+      paper_analyze_result: paper_analyze_agent/paper_analyze_result
+      writer_report: report_writer_agent/writer_report
+      feedback_result: feedback_agent/feedback_result
       paper_result: refinement_agent/refinement_result

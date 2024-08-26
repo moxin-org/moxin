@@ -4,9 +4,11 @@ use dora_node_api::{
     dora_core::config::{DataId, NodeId},
     DoraNode, Event, MetadataParameters,
 };
-use eyre::ContextCompat;
 use serde::{Deserialize, Deserializer, Serialize};
-use std::{collections::HashMap, sync::mpsc::{self, channel}};
+use std::{
+    collections::HashMap,
+    sync::mpsc::{self, channel},
+};
 
 use dora_node_api::arrow::array::AsArray;
 
@@ -64,7 +66,7 @@ pub enum MaeAgent {
 
 pub enum MaeAgentWorkflow {
     BasicReasoner(String),
-    Paper
+    Paper,
 }
 
 impl MaeAgent {
@@ -78,8 +80,12 @@ impl MaeAgent {
 
     pub fn workflow(&self) -> MaeAgentWorkflow {
         match self {
-            MaeAgent::Questioner => MaeAgentWorkflow::BasicReasoner("reasoner_agent.yml".to_string()),
-            MaeAgent::WebSearch => MaeAgentWorkflow::BasicReasoner("web_search_by_dspy.yml".to_string()),
+            MaeAgent::Questioner => {
+                MaeAgentWorkflow::BasicReasoner("reasoner_agent.yml".to_string())
+            }
+            MaeAgent::WebSearch => {
+                MaeAgentWorkflow::BasicReasoner("web_search_by_dspy.yml".to_string())
+            }
             MaeAgent::PapersResearch => MaeAgentWorkflow::Paper,
         }
     }
@@ -95,7 +101,8 @@ impl MaeAgent {
                 MaeAgentResponse::WebSearchResponse(response)
             }
             MaeAgent::PapersResearch => {
-                let response = serde_json::from_str::<MaeResponsePapersResearch>(&response).unwrap();
+                let response =
+                    serde_json::from_str::<MaeResponsePapersResearch>(&response).unwrap();
                 MaeAgentResponse::PapersResearchResponse(response)
             }
         }
@@ -107,6 +114,10 @@ pub enum MaeAgentResponse {
     QuestionerResponse(MaeResponseQuestioner),
     WebSearchResponse(MaeResponseWebSearch),
     PapersResearchResponse(MaeResponsePapersResearch),
+
+    // This is not a final response, it is an indication that the agent is still working
+    // but some step was completed
+    PapersResearchUpdate(String),
 }
 
 pub enum MaeAgentCommand {
@@ -134,7 +145,10 @@ impl MaeBackend {
         backend
     }
 
-    pub fn main_loop(command_receiver: mpsc::Receiver<MaeAgentCommand>, options: HashMap<String, String>) {
+    pub fn main_loop(
+        command_receiver: mpsc::Receiver<MaeAgentCommand>,
+        options: HashMap<String, String>,
+    ) {
         let Ok((mut node, _events)) =
             DoraNode::init_from_node_id(NodeId::from("reasoner_task_input".to_string()))
         else {
@@ -179,12 +193,11 @@ impl MaeBackend {
                             // 1. The task to be performed (user prompt)
                             // 2. The definition file of the agent
                             // 3. A hash map of options encoded in JSON format
-                            let data =
-                                StringArray::from(vec![
-                                    task.trim().to_string(),
-                                    definition_file,
-                                    serde_json::to_string(&options).unwrap(),
-                                ]);
+                            let data = StringArray::from(vec![
+                                task.trim().to_string(),
+                                definition_file,
+                                serde_json::to_string(&options).unwrap(),
+                            ]);
 
                             node.send_output(
                                 DataId::from("reasoner_task".to_string()),
@@ -198,18 +211,18 @@ impl MaeBackend {
                             // It contains:
                             // 1. The task to be performed (user prompt)
                             // 3. A hash map of options encoded in JSON format
-                            let data =
-                                StringArray::from(vec![
-                                    task.trim().to_string(),
-                                    serde_json::to_string(&options).unwrap(),
-                                ]);
+                            let data = StringArray::from(vec![
+                                task.trim().to_string(),
+                                serde_json::to_string(&options).unwrap(),
+                            ]);
 
-                            paper_node.send_output(
-                                DataId::from("task".to_string()),
-                                MetadataParameters::default(),
-                                data,
-                            )
-                            .expect("failed to send task to reasoner");
+                            paper_node
+                                .send_output(
+                                    DataId::from("task".to_string()),
+                                    MetadataParameters::default(),
+                                    data,
+                                )
+                                .expect("failed to send task to reasoner");
                         }
                     }
 
@@ -237,21 +250,36 @@ impl MaeBackend {
                                 // We are expecting more than one value in the response because of the options
                                 // that are carried in the array in all the workflow.
                                 // Here we simply discard the options and take the first value
-                                let array: &StringArray = data.as_string_opt().expect("not a string array");
+                                let array: &StringArray =
+                                    data.as_string_opt().expect("not a string array");
                                 let received_string: &str = array.value(0);
-                                let parsed =
-                                    current_agent.parse_response(received_string.to_string());
-                                sender_to_frontend
-                                    .send(parsed)
-                                    .expect("failed to send command");
+
+                                match id.as_str() {
+                                    // "paper_result" is the output identifier for the paper agent
+                                    // "reasoner_result" is the output identifier for the reasoner agent
+                                    "paper_result" | "reasoner_result" => {
+                                        let parsed = current_agent
+                                            .parse_response(received_string.to_string());
+                                        sender_to_frontend
+                                            .send(parsed)
+                                            .expect("failed to send command");
+
+                                        // Stop listening for events after receiving the actual response
+                                        break '_while;
+                                    }
+                                    completed_step => {
+                                        sender_to_frontend
+                                            .send(MaeAgentResponse::PapersResearchUpdate(
+                                                completed_step.to_string(),
+                                            ))
+                                            .expect("failed to send command");
+                                    }
+                                }
                             }
                             _other => {
                                 println!("Received id: {}, data: {:#?}", id, data);
                             }
                         }
-
-                        // Stop listening for events after receiving the actual response
-                        break '_while;
                     }
                     _other => {}
                 }

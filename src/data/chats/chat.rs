@@ -9,6 +9,7 @@ use moxin_protocol::protocol::Command;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, channel, Receiver, Sender};
 use std::thread;
+use std::time::Duration;
 use serde::{Deserialize, Serialize};
 
 use crate::data::filesystem::{read_from_file, write_to_file};
@@ -369,19 +370,44 @@ impl Chat {
             content: "".to_string(),
         });
 
+        self.receiving_response = true;
+
         let store_chat_tx = self.messages_update_sender.clone();
         std::thread::spawn(move || {
-            match rx.recv() {
-                Ok(response) => {
-                    println!("Received response from agent: {:?}", response);
-                    let _ = store_chat_tx.send(ChatMessageAction::MaeAgentResult(
-                        response.to_text_messgae(),
-                        agent.clone(),
-                    ));
-                    SignalToUI::set_ui_signal();
-                }
-                Err(e) => {
-                    println!("Error receiving response from agent: {:?}", e);
+            let mut had_some_update = false;
+            '_loop: loop {
+                match rx.recv() {
+                    Ok(MaeAgentResponse::PapersResearchUpdate(completed_step)) => {
+                        println!("Received PapersResearchUpdate from agent: {:?}", completed_step);
+                        // TODO rename ModelAppendDelta if this is valid for models and agents
+                        let _ = store_chat_tx.send(ChatMessageAction::ModelAppendDelta(
+                            MaeAgentResponse::PapersResearchUpdate(completed_step).to_text_messgae(),
+                        ));
+
+                        // Give some time between posting partial updates
+                        had_some_update = true;
+                        thread::sleep(Duration::from_millis(1000));
+                        SignalToUI::set_ui_signal();
+                    }
+                    Ok(response) => {
+                        println!("Received response from agent: {:?}", response);
+                        let _ = store_chat_tx.send(ChatMessageAction::MaeAgentResult(
+                            response.to_text_messgae(),
+                            agent.clone(),
+                        ));
+
+                        // Give some time to display the previos partial udpate if it existed
+                        if had_some_update {
+                            thread::sleep(Duration::from_millis(2000));
+                        }
+
+                        SignalToUI::set_ui_signal();
+                        break '_loop;
+                    }
+                    Err(e) => {
+                        println!("Error receiving response from agent: {:?}", e);
+                        break '_loop;
+                    }
                 }
             }
         });
@@ -407,7 +433,7 @@ impl Chat {
                 }
                 ChatMessageAction::MaeAgentResult(response, _agent) => {
                     let last = self.messages.last_mut().unwrap();
-                    last.content.push_str(&response);
+                    last.content = response;
                     self.receiving_response = false;
                 }
             }
@@ -456,9 +482,27 @@ impl MaeAgentResponseFormatter for MaeAgentResponse {
                 }).collect::<Vec<String>>().join("\n\n");
 
                 formatted.push_str(&resouces_list);
-
                 formatted
             }
+            MaeAgentResponse::PapersResearchUpdate(completed_step) => {
+                match completed_step.as_str() {
+                    "keywords" => {
+                        format!("Keywords were extracted from the task input.\n\nSearching and downloading papers (it could take some time)...\n\n")
+                    }
+                    "papers_info" => {
+                        format!("Papers were downloaded and their information was extracted.\n\nAnalyzing papers...\n\n")
+                    }
+                    "paper_analyze_result" => {
+                        format!("Papers were analyzed. Writing report...\n\n")
+                    }
+                    "writer_report" => {
+                        format!("Wrapping up...\n\n")
+                    }
+                    _ => {
+                        format!("")
+                    }
+                }
+            },
         }
     }
 }
