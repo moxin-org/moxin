@@ -22,6 +22,11 @@ class Operator:
                 result = """
                 """
                 dora_result = json.loads(dora_event["value"][0].as_py())
+                config_values = json.loads(dora_event["value"][1].as_py())
+
+                # Use provided API key that comes from Moxin
+                inputs['model_api_key'] = config_values["model_api_key"]
+
                 inputs['context'] = dora_result.get('context')
                 inputs['input_fields'] = {'suggestion': dora_result.get('suggestion'),
                                           'rag_data':json.dumps(dora_result.get('rag_data'))}
@@ -40,7 +45,9 @@ class Operator:
                 log_result = {"6, " + inputs.get('log_step_name', "Step_one"): result['context']}
                 write_agent_log(log_type=inputs.get('log_type', None), log_file_path=inputs.get('log_path', None),
                                 data=log_result)
-                send_output("refinement_result", pa.array([json.dumps(result)]),dora_event['metadata'])  # add this line
+
+                # Carry on Moxin config values from previous step
+                send_output("refinement_result", pa.array([json.dumps(result), json.dumps(config_values)]),dora_event['metadata'])  # add this line
 
         return DoraStatus.CONTINUE
 

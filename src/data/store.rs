@@ -79,6 +79,9 @@ impl Store {
         if let Some(api_key) = &preferences.serper_api_key {
             options.insert("serper_api_key".to_string(), api_key.to_string());
         }
+        if let Some(api_key) = &preferences.agentops_api_key {
+            options.insert("agentops_api_key".to_string(), api_key.to_string());
+        }
 
         let mae_backend = MaeBackend::new(options);
         //let mae_backend = MaeBackend::new_fake();

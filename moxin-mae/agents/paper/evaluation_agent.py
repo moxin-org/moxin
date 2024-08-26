@@ -23,6 +23,11 @@ class Operator:
                 result = """
                 """
                 dora_result = json.loads(dora_event["value"][0].as_py())
+                config_values = json.loads(dora_event["value"][1].as_py())
+
+                # Use provided API key that comes from Moxin
+                inputs['model_api_key'] = config_values["model_api_key"]
+
                 inputs['context'] = dora_result.get('context')
                 local_iterations = dora_result.get('local_iterations', None)
                 if local_iterations is not None:
@@ -54,7 +59,9 @@ class Operator:
                             inputs['local_iterations'] = local_iterations + 1
                             if inputs['local_iterations'] <= max_iterations :
                                 result = { 'context': dora_result.get('context'),'local_iterations':inputs['local_iterations'],'rag_data':dora_result['rag_data'],'task':dora_result['task']}
-                                send_output("evaluation_result", pa.array([json.dumps(result)]),dora_event['metadata'])
+
+                                # Carry on Moxin config values from previous step
+                                send_output("evaluation_result", pa.array([json.dumps(result), json.dumps(config_values)]),dora_event['metadata'])
                     # send_output("feedback_result", pa.array([json.dumps(result)]),dora_event['metadata'])  # add this line
         return DoraStatus.CONTINUE
 

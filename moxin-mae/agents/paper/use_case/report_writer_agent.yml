@@ -29,10 +29,7 @@ MODEL:
   #  MODEL_NAME: gpt-3.5-turbo
   MODEL_NAME: gpt-4o
   MODEL_MAX_TOKENS: 4096
-#  MODEL_API_KEY: ollama
-#  MODEL_NAME: qwen:32b
-#  MODEL_MAX_TOKENS: 2048
-#  MODEL_API_URL: http://192.168.0.75:11434
+
 ENV:
   PROXY_URL: null
   AGENT_TYPE: reasoner
