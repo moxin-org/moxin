@@ -14,6 +14,12 @@ pub struct MaeResponseQuestioner {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct MaeResponsePapersResearch {
+    pub task: String,
+    pub suggestion: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct MaeResponseWebSearchResource {
     pub name: String,
     pub url: String,
@@ -50,6 +56,12 @@ pub struct MaeResponseWebSearch {
 pub enum MaeAgent {
     Questioner,
     WebSearch,
+    PapersResearch,
+}
+
+pub enum MaeAgentWorkflow {
+    BasicReasoner(String),
+    Paper
 }
 
 impl MaeAgent {
@@ -57,13 +69,15 @@ impl MaeAgent {
         match self {
             MaeAgent::Questioner => "Questioner".to_string(),
             MaeAgent::WebSearch => "WebSearch".to_string(),
+            MaeAgent::PapersResearch => "PapersResearch".to_string(),
         }
     }
 
-    pub fn definition_file(&self) -> String {
+    pub fn workflow(&self) -> MaeAgentWorkflow {
         match self {
-            MaeAgent::Questioner => "reasoner_agent.yml".to_string(),
-            MaeAgent::WebSearch => "web_search_by_dspy.yml".to_string(),
+            MaeAgent::Questioner => MaeAgentWorkflow::BasicReasoner("reasoner_agent.yml".to_string()),
+            MaeAgent::WebSearch => MaeAgentWorkflow::BasicReasoner("web_search_by_dspy.yml".to_string()),
+            MaeAgent::PapersResearch => MaeAgentWorkflow::Paper,
         }
     }
 
@@ -77,6 +91,10 @@ impl MaeAgent {
                 let response = serde_json::from_str::<MaeResponseWebSearch>(&response).unwrap();
                 MaeAgentResponse::WebSearchResponse(response)
             }
+            MaeAgent::PapersResearch => {
+                let response = serde_json::from_str::<MaeResponsePapersResearch>(&response).unwrap();
+                MaeAgentResponse::PapersResearchResponse(response)
+            }
         }
     }
 }
@@ -85,6 +103,7 @@ impl MaeAgent {
 pub enum MaeAgentResponse {
     QuestionerResponse(MaeResponseQuestioner),
     WebSearchResponse(MaeResponseWebSearch),
+    PapersResearchResponse(MaeResponsePapersResearch),
 }
 
 pub enum MaeAgentCommand {
@@ -120,6 +139,13 @@ impl MaeBackend {
             return;
         };
 
+        let Ok((mut paper_node, _events)) =
+            DoraNode::init_from_node_id(NodeId::from("paper_task_input".to_string()))
+        else {
+            eprintln!("Failed to initialize node: paper_task_input");
+            return;
+        };
+
         let Ok((_node, mut events)) =
             DoraNode::init_from_node_id(NodeId::from("reasoner_output_moxin".to_string()))
         else {
@@ -127,7 +153,14 @@ impl MaeBackend {
             return;
         };
 
-        dbg!("MAE backend started");
+        let Ok((_node, mut paper_events)) =
+            DoraNode::init_from_node_id(NodeId::from("paper_output_moxin".to_string()))
+        else {
+            eprintln!("Failed to initialize node: paper_output_moxin");
+            return;
+        };
+
+        println!("MAE backend started");
 
         loop {
             let sender_to_frontend: mpsc::Sender<MaeAgentResponse>;
@@ -136,24 +169,46 @@ impl MaeBackend {
             // Receive command from frontend
             match command_receiver.recv().unwrap() {
                 MaeAgentCommand::SendTask(task, agent, tx) => {
-                    // Information sent to MAE agent goes in the form of an array
-                    // It contains:
-                    // 1. The task to be performed (user prompt)
-                    // 2. The definition file of the agent
-                    // 3. A hash map of options encoded in JSON format
-                    let data =
-                        StringArray::from(vec![
-                            task.trim().to_string(),
-                            agent.definition_file(),
-                            serde_json::to_string(&options).unwrap(),
-                        ]);
+                    match agent.workflow() {
+                        MaeAgentWorkflow::BasicReasoner(definition_file) => {
+                            // Information sent to MAE agent goes in the form of an array
+                            // It contains:
+                            // 1. The task to be performed (user prompt)
+                            // 2. The definition file of the agent
+                            // 3. A hash map of options encoded in JSON format
+                            let data =
+                                StringArray::from(vec![
+                                    task.trim().to_string(),
+                                    definition_file,
+                                    serde_json::to_string(&options).unwrap(),
+                                ]);
 
-                    node.send_output(
-                        DataId::from("reasoner_task".to_string()),
-                        MetadataParameters::default(),
-                        data,
-                    )
-                    .expect("failed to send task to reasoner");
+                            node.send_output(
+                                DataId::from("reasoner_task".to_string()),
+                                MetadataParameters::default(),
+                                data,
+                            )
+                            .expect("failed to send task to reasoner");
+                        }
+                        MaeAgentWorkflow::Paper => {
+                            // Information sent to MAE agent goes in the form of an array
+                            // It contains:
+                            // 1. The task to be performed (user prompt)
+                            // 3. A hash map of options encoded in JSON format
+                            let data =
+                                StringArray::from(vec![
+                                    task.trim().to_string(),
+                                    serde_json::to_string(&options).unwrap(),
+                                ]);
+
+                            paper_node.send_output(
+                                DataId::from("task".to_string()),
+                                MetadataParameters::default(),
+                                data,
+                            )
+                            .expect("failed to send task to reasoner");
+                        }
+                    }
 
                     sender_to_frontend = tx;
                     current_agent = agent;
@@ -161,7 +216,13 @@ impl MaeBackend {
             }
 
             // Listen for events from reasoner to send the response to frontend
-            '_while: while let Some(event) = events.recv() {
+            let the_events = match current_agent {
+                MaeAgent::Questioner => &mut events,
+                MaeAgent::WebSearch => &mut events,
+                MaeAgent::PapersResearch => &mut paper_events,
+            };
+
+            '_while: while let Some(event) = the_events.recv() {
                 match event {
                     Event::Input {
                         id,
@@ -172,7 +233,6 @@ impl MaeBackend {
                             dora_node_api::arrow::datatypes::DataType::Utf8 => {
                                 let received_string: &str =
                                     TryFrom::try_from(&data).expect("expected string message");
-
                                 let parsed =
                                     current_agent.parse_response(received_string.to_string());
                                 sender_to_frontend
@@ -224,6 +284,14 @@ impl MaeBackend {
                                 },
                             };
                             tx.send(MaeAgentResponse::WebSearchResponse(response))
+                                .expect("failed to send command");
+                        }
+                        MaeAgent::PapersResearch => {
+                            let response = MaeResponsePapersResearch {
+                                task: task.clone(),
+                                suggestion: "This is a fake response".to_string(),
+                            };
+                            tx.send(MaeAgentResponse::PapersResearchResponse(response))
                                 .expect("failed to send command");
                         }
                     },

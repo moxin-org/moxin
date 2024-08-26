@@ -447,6 +447,7 @@ impl MaeAgentResponseFormatter for MaeAgentResponse {
     fn to_text_messgae(&self) -> String {
         match self {
             MaeAgentResponse::QuestionerResponse(response) => response.result.clone(),
+            MaeAgentResponse::PapersResearchResponse(response) => response.suggestion.clone(),
             MaeAgentResponse::WebSearchResponse(response) => {
                 let mut formatted = format!("{}\n\n",response.result.web_search_results);
 
