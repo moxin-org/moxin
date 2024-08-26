@@ -28,11 +28,6 @@ model:
   model_max_tokens: 2048
   module_api_url: null
 
-#  model_api_key:
-#  model_name: moonshot-v1-32k
-#  model_max_tokens: 2048
-#  module_api_url: https://api.moonshot.cn/v1
-
 other:
   proxy_url: null
 

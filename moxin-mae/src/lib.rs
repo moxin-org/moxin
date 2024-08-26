@@ -1,11 +1,14 @@
 use dora_node_api::{
     self,
-    arrow::array::StringArray,
+    arrow::{array::StringArray, datatypes},
     dora_core::config::{DataId, NodeId},
     DoraNode, Event, MetadataParameters,
 };
+use eyre::ContextCompat;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::{collections::HashMap, sync::mpsc::{self, channel}};
+
+use dora_node_api::arrow::array::AsArray;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MaeResponseQuestioner {
@@ -230,9 +233,12 @@ impl MaeBackend {
                         data,
                     } => {
                         match data.data_type() {
-                            dora_node_api::arrow::datatypes::DataType::Utf8 => {
-                                let received_string: &str =
-                                    TryFrom::try_from(&data).expect("expected string message");
+                            datatypes::DataType::Utf8 => {
+                                // We are expecting more than one value in the response because of the options
+                                // that are carried in the array in all the workflow.
+                                // Here we simply discard the options and take the first value
+                                let array: &StringArray = data.as_string_opt().expect("not a string array");
+                                let received_string: &str = array.value(0);
                                 let parsed =
                                     current_agent.parse_response(received_string.to_string());
                                 sender_to_frontend

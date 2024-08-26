@@ -16,6 +16,7 @@ pub struct Preferences {
 
     pub open_ai_api_key: Option<String>,
     pub serper_api_key: Option<String>,
+    pub agentops_api_key: Option<String>,
 }
 
 impl Preferences {
@@ -38,6 +39,7 @@ impl Preferences {
                 downloaded_files_dir: setup_model_downloads_folder(),
                 open_ai_api_key: None,
                 serper_api_key: None,
+                agentops_api_key: None,
             }
         }
 
