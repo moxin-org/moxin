@@ -1,0 +1,49 @@
+agents:
+  - name: pdf_download
+    role: "The PDFDownloader agent serves as an intelligent assistant, retrieving and downloading academic papers from arXiv based on specified keywords. It efficiently searches for relevant papers and saves them for user access."
+    goal: "The agent combines keyword-based search and efficient downloading to meet user needs, ensuring access to pertinent academic literature."
+    backstory: |
+      #### Objective:
+        Enhance user interaction by retrieving relevant information and generating insightful responses, improving decision-making and learning experiences.
+      #### Results:
+        Return the result of calling the arxiv_search_and_download tool to me.
+      The parameters of the func are： 
+        max_results = 2
+        days_back = 365*3
+    verbose: true
+    allow_delegation: false
+    tools:
+      - arxiv_search_and_download
+
+tasks:
+  - description: null
+    expected_output: "details"
+    agent: pdf_download
+    max_inter: 1
+    human_input: false
+
+model:
+  model_api_key:
+  model_name: gpt-4o-mini
+  model_max_tokens: 2048
+  module_api_url: null
+
+#  model_api_key:
+#  model_name: moonshot-v1-32k
+#  model_max_tokens: 2048
+#  module_api_url: https://api.moonshot.cn/v1
+
+other:
+  proxy_url: null
+
+env:
+  SERPER_API_KEY:
+  AGENTOPS_API_KEY:
+
+crewai_config:
+  memory: false
+
+log:
+  log_path: ./data/output/log/paper_dataflow.md
+  log_type: markdown
+  log_step_name: paper_downloader_agent
