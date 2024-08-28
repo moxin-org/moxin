@@ -131,7 +131,11 @@ pub struct MaeBackend {
 
 impl MaeBackend {
     pub fn available_agents() -> Vec<MaeAgent> {
-        vec![MaeAgent::Questioner, MaeAgent::WebSearch]
+        vec![
+            MaeAgent::Questioner,
+            MaeAgent::WebSearch,
+            MaeAgent::PapersResearch,
+        ]
     }
 
     pub fn new(options: HashMap<String, String>) -> Self {

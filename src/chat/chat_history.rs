@@ -18,6 +18,14 @@ live_design! {
 
     ICON_NEW_CHAT = dep("crate://self/resources/icons/new_chat.svg")
 
+    HeadingLabel = <Label> {
+        margin: {bottom: 4},
+        draw_text:{
+            text_style: <REGULAR_FONT>{font_size: 10},
+            color: #667085
+        }
+    }
+
     ChatHistory = {{ChatHistory}} <MoxinTogglePanel> {
         open_content = {
             <View> {
@@ -36,7 +44,9 @@ live_design! {
                     padding: { left: 25, right: 25, bottom: 58 }
 
                     list = <PortalList> {
+                        AgentHeading = <HeadingLabel> { text: "AGENTS" }
                         Agent = <AgentButton> {}
+                        ChatsHeading = <HeadingLabel> { text: "CHATS", margin: {top: 10}, }
                         ChatHistoryCard = <ChatHistoryCard> {
                             padding: {top: 20}
                             cursor: Default
@@ -101,12 +111,22 @@ impl Widget for ChatHistory {
 
         let agents_count = agents.len();
         let chats_count = chat_ids.len();
-        let items_count = agents_count + chats_count;
+
+        // +2 for the headings.
+        let items_count = agents_count + chats_count + 2;
 
         while let Some(view_item) = self.deref.draw_walk(cx, scope, walk).step() {
             if let Some(mut list) = view_item.as_portal_list().borrow_mut() {
                 list.set_item_range(cx, 0, items_count);
                 while let Some(item_id) = list.next_visible_item(cx) {
+                    if item_id == 0 {
+                        let item = list.item(cx, item_id, live_id!(AgentHeading)).unwrap();
+                        item.draw_all(cx, scope);
+                        continue;
+                    }
+                    
+                    let item_id = item_id - 1;
+
                     if item_id < agents_count {
                         let agent = &agents[item_id];
                         let item = list.item(cx, item_id, live_id!(Agent)).unwrap();
@@ -117,6 +137,14 @@ impl Widget for ChatHistory {
 
                     let item_id = item_id - agents_count;
 
+                    if item_id == 0 {
+                        let item = list.item(cx, item_id, live_id!(ChatsHeading)).unwrap();
+                        item.draw_all(cx, scope);
+                        continue;
+                    }
+
+                    let item_id = item_id - 1;
+                    
                     if item_id < chats_count {
                         let mut item = list
                             .item(cx, item_id,  live_id!(ChatHistoryCard))
