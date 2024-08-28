@@ -11,16 +11,21 @@ live_design!(
 
     AgentButton = {{AgentButton}} {
         flow: Overlay,
-        align: {x: 0.0, y: 0.5},
-        <Image> {
-            width: 24,
-            height: 24,
-            source: dep("crate://self/resources/images/agent.png")
+        align: { x: 0.0, y: 0.5 },
+        <View> {
+            width: Fit,
+            height: Fit,
+            padding: { left: 9 },
+            <Image> {
+                width: 24,
+                height: 24,
+                source: dep("crate://self/resources/images/agent.png")
+            }
         }
         button = <MoxinButton> {
             flow: Right,
-            align: {x: 0.0, y: 0.5},
-            padding: {left: 36, right: 15, top: 15, bottom: 15},
+            align: { x: 0.0, y: 0.5 },
+            padding: { left: 45, right: 15, top: 15, bottom: 15 },
             width: Fill,
             draw_bg: {
                 color: #0000
@@ -28,9 +33,9 @@ live_design!(
                 border_width: 0
             }
             draw_text: {
-                text_style: <REGULAR_FONT>{font_size: 10},
+                text_style: <BOLD_FONT>{font_size: 10},
                 fn get_color(self) -> vec4 {
-                    return #000;
+                    return #0008;
                 }
             }
         }

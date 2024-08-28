@@ -149,7 +149,7 @@ live_design! {
                         width: Fill,
                         height: Fit,
 
-                        empty_message: "Enter a message"
+                        empty_message: "Enter a message or @ an agent"
                         draw_bg: {
                             radius: 10.0
                             color: #fff

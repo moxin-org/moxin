@@ -2,7 +2,6 @@ use crate::{
     data::{chats::chat::ChatID, store::Store},
     shared::modal::ModalWidgetExt,
 };
-use chrono::{DateTime, Local, TimeZone};
 
 use makepad_widgets::*;
 
@@ -75,130 +74,164 @@ live_design! {
 
     ChatHistoryCard = {{ChatHistoryCard}} {
         flow: Overlay,
-        width: Fit,
+        width: Fill,
         height: Fit,
 
+        selected_bg = <RoundedView> {
+            width: Fill
+            height: 52
+            padding: {left: 4, right: 4}
+
+            show_bg: true
+            draw_bg: {
+                color: #0000
+                border_width: 0
+                radius: 5
+            }
+        }
+
         content = <RoundedView> {
-            flow: Down
-            width: 248
-            height: Fit
-            padding: 20
-            spacing: 12
+            width: Fill
+            height: 52
+            flow: Right
+            padding: {left: 4, right: 4}
+            spacing: 4
 
             cursor: Hand
-
+            show_bg: true
             draw_bg: {
-                color: #fff
-                border_width: 1
+                color: #0000
+                border_width: 0
+                radius: 5
             }
 
             <View> {
-                width: Fill
-                height: Fit
-                flow: Right
-                spacing: 10
-                padding: { top: 4, bottom: 4 }
-                margin: 0
-
-                title_wrapper = <RoundedView> {
-                    show_bg: true,
-                    draw_bg: {
-                        radius: 12.0,
-                    },
-
-                    width: Fill,
-                    height: Fit,
-                    flow: Down,
-                    align: {x: 0.5, y: 0.0},
-
-                    title_input_container = <View> {
-                        visible: false,
-                        width: Fill,
-                        height: Fit,
-                        title_input = <EditTextInput> {}
-                    }
-
-                    title_label_container = <View> {
-                        visible: false,
-                        width: Fill,
-                        height: Fit,
-
-                        title_label = <Label> {
-                            width: Fill,
-                            height: Fit,
-                            draw_text:{
-                                text_style: <BOLD_FONT>{font_size: 10},
-                                color: #000,
-                            }
-                            text: ""
-                        }
-                    }
-
-                    edit_buttons = <View> {
-                        visible: false,
-                        width: Fit,
-                        height: Fit,
-                        margin: {top: 10},
-                        spacing: 6,
-                        save = <SaveButton> {}
-                        cancel = <CancelButton> {}
-                    }
-                }
-
-                // TODO: This is horrible, find a way of getting the position of the button.
-                chat_options_wrapper = <View> {
-                    width: Fit
-                    height: Fit
-                    padding: 4
-
-                    chat_options = <MoxinButton> {
-                        width: Fit
-                        height: Fit
-                        padding: {top: 0, right: 4, bottom: 6, left: 4}
-                        margin: { top: -4}
-
-                        draw_bg: {
-                            radius: 5
-                        }
-
-                        draw_text:{
-                            text_style: <BOLD_FONT>{font_size: 14},
-                            color: #667085,
-                        }
-                        text: "..."
-
-                        reset_hover_on_click: false
-                    }
-                }
-            }
-
-            <View> {
-                width: Fill
-                height: Fit
-                align: {y: 1}
+                width: Fit
+                height: 50
+                align: {y: 0.5}
+                padding: {left: 4}
 
                 avatar = <ChatAgentAvatar> {
-                    width: 30
-                    height: 30
+                    width: 26
+                    height: 26
 
                     draw_bg: {
-                        radius: 8
+                        radius: 6.5
                     }
                     avatar_label = {
                         text: ""
+                        draw_text:{
+                            text_style: <BOLD_FONT>{font_size: 8},
+                            color: #fff,
+                        }
                     }
                 }
+            }
+            <View> {
+                width: Fill
+                height: Fit
+                flow: Down
+                spacing: 2
+                padding: { left: 8, top: 10, bottom: 10 }
 
-                filler = <View> {width: Fill}
-
-                date = <Label> {
-                    width: Fit,
+                model_or_agent_name_label = <Label> {
+                    width: Fill,
                     height: Fit,
                     draw_text:{
-                        text_style: <REGULAR_FONT>{font_size: 10},
-                        color: #667085,
+                        text_style: <BOLD_FONT>{font_size: 7.5},
+                        color: #475467,
                     }
-                    text: "5:29 PM, 5/12/24"
+                    text: "Search Assistant"
+                }
+
+                <View> {
+                    width: Fill
+                    height: Fit
+                    flow: Right
+                    spacing: 10
+                    padding: { top: 4, bottom: 4 }
+
+                    <View> {
+                        width: Fill,
+                        height: Fit,
+                        flow: Down,
+
+                        title_input_container = <View> {
+                            visible: false,
+                            width: Fill,
+                            height: Fit,
+                            title_input = <EditTextInput> {}
+                        }
+
+                        title_label_container = <View> {
+                            visible: false,
+                            width: Fill,
+                            height: Fit,
+
+                            title_label = <Label> {
+                                width: Fill,
+                                height: Fit,
+                                draw_text:{
+                                    text_style: <REGULAR_FONT>{font_size: 10},
+                                    color: #101828,
+                                }
+                                text: ""
+                            }
+                        }
+
+                        edit_buttons = <View> {
+                            visible: false,
+                            width: Fit,
+                            height: Fit,
+                            margin: {top: 10},
+                            spacing: 6,
+                            save = <SaveButton> {}
+                            cancel = <CancelButton> {}
+                        }
+                    }
+
+                    // chat_options_wrapper = <View> {
+                    //     width: Fit
+                    //     height: Fit
+                    //     padding: 4
+
+                    //     chat_options = <MoxinButton> {
+                    //         width: Fit
+                    //         height: Fit
+                    //         padding: {top: 0, right: 4, bottom: 6, left: 4}
+                    //         margin: { top: -4}
+
+                    //         draw_bg: {
+                    //             radius: 5
+                    //         }
+
+                    //         draw_text:{
+                    //             text_style: <BOLD_FONT>{font_size: 14},
+                    //             color: #667085,
+                    //         }
+                    //         text: "..."
+
+                    //         reset_hover_on_click: false
+                    //     }
+                    // }
+                }
+            }
+
+            animator: {
+                hover = {
+                    default: off
+                    off = {
+                        from: {all: Forward {duration: 0.15}}
+                        apply: {
+                            draw_bg: {color: #F2F4F700}
+                        }
+                    }
+                    on = {
+                        from: {all: Snap}
+                        apply: {
+                            draw_bg: {color: #EAECEF88}
+                        }
+                    }
                 }
             }
         }
@@ -255,22 +288,20 @@ impl Widget for ChatHistoryCard {
             .unwrap();
 
         if let Some(current_chat_id) = store.chats.get_current_chat_id() {
-            let content_view = self.view(id!(content));
+            let content_view_highlight = self.view(id!(selected_bg));
 
             if current_chat_id == self.chat_id {
-                let active_border_color = vec3(0.082, 0.522, 0.604);
-                content_view.apply_over(
+                content_view_highlight.apply_over(
                     cx,
                     live! {
-                        draw_bg: {border_color: (active_border_color)}
+                        draw_bg: {color: #EAECEF}
                     },
                 );
             } else {
-                let border_color = vec3(0.918, 0.925, 0.941);
-                content_view.apply_over(
+                content_view_highlight.apply_over(
                     cx,
                     live! {
-                        draw_bg: {border_color: (border_color)}
+                        draw_bg: {color: #x0000}
                     },
                 );
             }
@@ -287,17 +318,6 @@ impl Widget for ChatHistoryCard {
 
         let avatar_label = self.view.label(id!(avatar.avatar_label));
         avatar_label.set_text(&initial_letter);
-
-        let date_label = self.view.label(id!(date));
-
-        // Format date.
-        // TODO: Feels wrong to asume the id will always be the date, do smth about this.
-        let datetime =
-            DateTime::from_timestamp_millis(chat.borrow().id as i64).expect("Invalid timestamp");
-        let local_datetime: DateTime<Local> = Local.from_utc_datetime(&datetime.naive_utc());
-        let formatted_date = local_datetime.format("%-I:%M %p, %-d/%m/%y").to_string();
-
-        date_label.set_text(&formatted_date);
 
         self.view.draw_walk(cx, scope, walk)
     }
