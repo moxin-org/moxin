@@ -19,9 +19,9 @@ live_design! {
     ICON_NEW_CHAT = dep("crate://self/resources/icons/new_chat.svg")
 
     HeadingLabel = <Label> {
-        margin: {bottom: 4},
+        margin: {left: 4, bottom: 4},
         draw_text:{
-            text_style: <REGULAR_FONT>{font_size: 10},
+            text_style: <BOLD_FONT>{font_size: 10},
             color: #667085
         }
     }
@@ -41,14 +41,14 @@ live_design! {
                     height: Fill,
 
                     margin: { top: 120 }
-                    padding: { left: 25, right: 25, bottom: 58 }
+                    padding: { left: 14, right: 14, bottom: 58 }
 
                     list = <PortalList> {
                         AgentHeading = <HeadingLabel> { text: "AGENTS" }
                         Agent = <AgentButton> {}
                         ChatsHeading = <HeadingLabel> { text: "CHATS", margin: {top: 10}, }
                         ChatHistoryCard = <ChatHistoryCard> {
-                            padding: {top: 20}
+                            padding: {top: 4}
                             cursor: Default
                         }
                     }
