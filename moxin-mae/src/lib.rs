@@ -13,97 +13,97 @@ use std::{
 use dora_node_api::arrow::array::AsArray;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct MaeResponseQuestioner {
+pub struct MaeResponseReasoner {
     pub task: String,
     pub result: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct MaeResponsePapersResearch {
+pub struct MaeResponseResearchScholar {
     pub task: String,
     pub suggestion: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct MaeResponseWebSearchResource {
+pub struct MaeResponseSearchAssistantResource {
     pub name: String,
     pub url: String,
     pub snippet: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct MaeResponseWebSearchResult {
+pub struct MaeResponseSearchAssistantResult {
     pub web_search_results: String,
     #[serde(deserialize_with = "parse_web_search_resource")]
-    pub web_search_resource: Vec<MaeResponseWebSearchResource>,
+    pub web_search_resource: Vec<MaeResponseSearchAssistantResource>,
 }
 
 fn parse_web_search_resource<'de, D>(
     deserializer: D,
-) -> Result<Vec<MaeResponseWebSearchResource>, D::Error>
+) -> Result<Vec<MaeResponseSearchAssistantResource>, D::Error>
 where
     D: Deserializer<'de>,
 {
     let s: String = Deserialize::deserialize(deserializer)?;
-    let resources: Vec<MaeResponseWebSearchResource> =
+    let resources: Vec<MaeResponseSearchAssistantResource> =
         serde_json::from_str(&s).map_err(serde::de::Error::custom)?;
 
     Ok(resources)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct MaeResponseWebSearch {
+pub struct MaeResponseSearchAssistant {
     pub task: String,
-    pub result: MaeResponseWebSearchResult,
+    pub result: MaeResponseSearchAssistantResult,
 }
 
 #[derive(Debug, Copy, Clone)]
 pub enum MaeAgent {
-    Questioner,
-    WebSearch,
-    PapersResearch,
+    Reasoner,
+    SearchAssistant,
+    ResearchScholar,
 }
 
 pub enum MaeAgentWorkflow {
     BasicReasoner(String),
-    Paper,
+    ResearchScholar,
 }
 
 impl MaeAgent {
     pub fn name(&self) -> String {
         match self {
-            MaeAgent::Questioner => "Questioner".to_string(),
-            MaeAgent::WebSearch => "WebSearch".to_string(),
-            MaeAgent::PapersResearch => "PapersResearch".to_string(),
+            MaeAgent::Reasoner => "Reasoner Agent".to_string(),
+            MaeAgent::SearchAssistant => "Search Assistant".to_string(),
+            MaeAgent::ResearchScholar => "Research Scholar".to_string(),
         }
     }
 
     pub fn workflow(&self) -> MaeAgentWorkflow {
         match self {
-            MaeAgent::Questioner => {
+            MaeAgent::Reasoner => {
                 MaeAgentWorkflow::BasicReasoner("reasoner_agent.yml".to_string())
             }
-            MaeAgent::WebSearch => {
+            MaeAgent::SearchAssistant => {
                 MaeAgentWorkflow::BasicReasoner("web_search_by_dspy.yml".to_string())
             }
-            MaeAgent::PapersResearch => MaeAgentWorkflow::Paper,
+            MaeAgent::ResearchScholar => MaeAgentWorkflow::ResearchScholar,
         }
     }
 
     pub fn parse_response(&self, response: String) -> MaeAgentResponse {
         match self {
-            MaeAgent::Questioner => {
-                let response = serde_json::from_str::<MaeResponseQuestioner>(&response).unwrap();
-                MaeAgentResponse::QuestionerResponse(response)
+            MaeAgent::Reasoner => {
+                let response = serde_json::from_str::<MaeResponseReasoner>(&response).unwrap();
+                MaeAgentResponse::ReasonerResponse(response)
             }
-            MaeAgent::WebSearch => {
-                let response = serde_json::from_str::<MaeResponseWebSearch>(&response).unwrap();
-                MaeAgentResponse::WebSearchResponse(response)
+            MaeAgent::SearchAssistant => {
+                let response = serde_json::from_str::<MaeResponseSearchAssistant>(&response).unwrap();
+                MaeAgentResponse::SearchAssistantResponse(response)
             }
-            MaeAgent::PapersResearch => {
+            MaeAgent::ResearchScholar => {
                 let response =
-                    serde_json::from_str::<MaeResponsePapersResearch>(&response).unwrap();
-                MaeAgentResponse::PapersResearchResponse(response)
+                    serde_json::from_str::<MaeResponseResearchScholar>(&response).unwrap();
+                MaeAgentResponse::ResearchScholarResponse(response)
             }
         }
     }
@@ -111,13 +111,13 @@ impl MaeAgent {
 
 #[derive(Debug)]
 pub enum MaeAgentResponse {
-    QuestionerResponse(MaeResponseQuestioner),
-    WebSearchResponse(MaeResponseWebSearch),
-    PapersResearchResponse(MaeResponsePapersResearch),
+    ReasonerResponse(MaeResponseReasoner),
+    SearchAssistantResponse(MaeResponseSearchAssistant),
+    ResearchScholarResponse(MaeResponseResearchScholar),
 
     // This is not a final response, it is an indication that the agent is still working
     // but some step was completed
-    PapersResearchUpdate(String),
+    ResearchScholarUpdate(String),
 }
 
 pub enum MaeAgentCommand {
@@ -132,9 +132,9 @@ pub struct MaeBackend {
 impl MaeBackend {
     pub fn available_agents() -> Vec<MaeAgent> {
         vec![
-            MaeAgent::Questioner,
-            MaeAgent::WebSearch,
-            MaeAgent::PapersResearch,
+            MaeAgent::Reasoner,
+            MaeAgent::SearchAssistant,
+            MaeAgent::ResearchScholar,
         ]
     }
 
@@ -210,7 +210,7 @@ impl MaeBackend {
                             )
                             .expect("failed to send task to reasoner");
                         }
-                        MaeAgentWorkflow::Paper => {
+                        MaeAgentWorkflow::ResearchScholar => {
                             // Information sent to MAE agent goes in the form of an array
                             // It contains:
                             // 1. The task to be performed (user prompt)
@@ -237,9 +237,9 @@ impl MaeBackend {
 
             // Listen for events from reasoner to send the response to frontend
             let the_events = match current_agent {
-                MaeAgent::Questioner => &mut events,
-                MaeAgent::WebSearch => &mut events,
-                MaeAgent::PapersResearch => &mut paper_events,
+                MaeAgent::Reasoner => &mut events,
+                MaeAgent::SearchAssistant => &mut events,
+                MaeAgent::ResearchScholar => &mut paper_events,
             };
 
             '_while: while let Some(event) = the_events.recv() {
@@ -273,7 +273,7 @@ impl MaeBackend {
                                     }
                                     completed_step => {
                                         sender_to_frontend
-                                            .send(MaeAgentResponse::PapersResearchUpdate(
+                                            .send(MaeAgentResponse::ResearchScholarUpdate(
                                                 completed_step.to_string(),
                                             ))
                                             .expect("failed to send command");
@@ -301,35 +301,35 @@ impl MaeBackend {
                 // Receive command from frontend
                 match command_receiver.recv().unwrap() {
                     MaeAgentCommand::SendTask(task, agent, tx) => match agent {
-                        MaeAgent::Questioner => {
-                            let response = MaeResponseQuestioner {
+                        MaeAgent::Reasoner => {
+                            let response = MaeResponseReasoner {
                                 task: task.clone(),
                                 result: "This is a fake response".to_string(),
                             };
-                            tx.send(MaeAgentResponse::QuestionerResponse(response))
+                            tx.send(MaeAgentResponse::ReasonerResponse(response))
                                 .expect("failed to send command");
                         }
-                        MaeAgent::WebSearch => {
-                            let response = MaeResponseWebSearch {
+                        MaeAgent::SearchAssistant => {
+                            let response = MaeResponseSearchAssistant {
                                 task: task.clone(),
-                                result: MaeResponseWebSearchResult {
+                                result: MaeResponseSearchAssistantResult {
                                     web_search_results: "This is a fake response".to_string(),
-                                    web_search_resource: vec![MaeResponseWebSearchResource {
+                                    web_search_resource: vec![MaeResponseSearchAssistantResource {
                                         name: "Fake resource".to_string(),
                                         url: "https://fake.com".to_string(),
                                         snippet: "This is a fake snippet".to_string(),
                                     }],
                                 },
                             };
-                            tx.send(MaeAgentResponse::WebSearchResponse(response))
+                            tx.send(MaeAgentResponse::SearchAssistantResponse(response))
                                 .expect("failed to send command");
                         }
-                        MaeAgent::PapersResearch => {
-                            let response = MaeResponsePapersResearch {
+                        MaeAgent::ResearchScholar => {
+                            let response = MaeResponseResearchScholar {
                                 task: task.clone(),
                                 suggestion: "This is a fake response".to_string(),
                             };
-                            tx.send(MaeAgentResponse::PapersResearchResponse(response))
+                            tx.send(MaeAgentResponse::ResearchScholarResponse(response))
                                 .expect("failed to send command");
                         }
                     },
