@@ -377,11 +377,11 @@ impl Chat {
             let mut had_some_update = false;
             '_loop: loop {
                 match rx.recv() {
-                    Ok(MaeAgentResponse::PapersResearchUpdate(completed_step)) => {
-                        println!("Received PapersResearchUpdate from agent: {:?}", completed_step);
+                    Ok(MaeAgentResponse::ResearchScholarUpdate(completed_step)) => {
+                        println!("Received ResearchScholarUpdate from agent: {:?}", completed_step);
                         // TODO rename ModelAppendDelta if this is valid for models and agents
                         let _ = store_chat_tx.send(ChatMessageAction::ModelAppendDelta(
-                            MaeAgentResponse::PapersResearchUpdate(completed_step).to_text_messgae(),
+                            MaeAgentResponse::ResearchScholarUpdate(completed_step).to_text_messgae(),
                         ));
 
                         // Give some time between posting partial updates
@@ -472,9 +472,9 @@ trait MaeAgentResponseFormatter {
 impl MaeAgentResponseFormatter for MaeAgentResponse {
     fn to_text_messgae(&self) -> String {
         match self {
-            MaeAgentResponse::QuestionerResponse(response) => response.result.clone(),
-            MaeAgentResponse::PapersResearchResponse(response) => response.suggestion.clone(),
-            MaeAgentResponse::WebSearchResponse(response) => {
+            MaeAgentResponse::ReasonerResponse(response) => response.result.clone(),
+            MaeAgentResponse::ResearchScholarResponse(response) => response.suggestion.clone(),
+            MaeAgentResponse::SearchAssistantResponse(response) => {
                 let mut formatted = format!("{}\n\n",response.result.web_search_results);
 
                 let resouces_list = response.result.web_search_resource.iter().enumerate().map(|(i, r)| {
@@ -484,7 +484,7 @@ impl MaeAgentResponseFormatter for MaeAgentResponse {
                 formatted.push_str(&resouces_list);
                 formatted
             }
-            MaeAgentResponse::PapersResearchUpdate(completed_step) => {
+            MaeAgentResponse::ResearchScholarUpdate(completed_step) => {
                 match completed_step.as_str() {
                     "keywords" => {
                         format!("Keywords were extracted from the task input.\n\nSearching and downloading papers (it could take some time)...\n\n")
