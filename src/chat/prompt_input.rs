@@ -108,7 +108,7 @@ live_design! {
                         width: 20,
                         height: 20,
                         margin: {right: 8}
-                        source: dep("crate://self/resources/images/agent.png"),
+                        source: dep("crate://self/resources/images/search_assistant_agent_icon.png"),
                     }
                     <Label> {
                         text: "Chat with "
@@ -275,7 +275,7 @@ impl LiveHook for PromptInput {
         let list = self.computed_list(id!(agent_autocomplete.list));
         list.compute_from(MaeBackend::available_agents().iter(), |agent| {
             let widget = WidgetRef::new_from_ptr(cx, self.agent_template);
-            widget.as_agent_button().set_agent(*agent);
+            widget.as_agent_button().set_agent(cx, *agent);
             widget
         });
         list.redraw(cx);

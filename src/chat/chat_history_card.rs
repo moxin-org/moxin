@@ -171,8 +171,8 @@ live_design! {
                             title_label = <Label> {
                                 width: Fill,
                                 height: Fit,
-                                draw_text:{
-                                    text_style: <REGULAR_FONT>{font_size: 10},
+                                draw_text: {
+                                    text_style: <REGULAR_FONT>{font_size: 9.5},
                                     color: #101828,
                                 }
                                 text: ""
@@ -190,30 +190,30 @@ live_design! {
                         }
                     }
 
-                    // chat_options_wrapper = <View> {
-                    //     width: Fit
-                    //     height: Fit
-                    //     padding: 4
+                    chat_options_wrapper = <View> {
+                        width: Fit
+                        height: Fill
+                        padding: 4
 
-                    //     chat_options = <MoxinButton> {
-                    //         width: Fit
-                    //         height: Fit
-                    //         padding: {top: 0, right: 4, bottom: 6, left: 4}
-                    //         margin: { top: -4}
+                        chat_options = <MoxinButton> {
+                            width: Fit
+                            height: Fit
+                            padding: { top: 0, right: 4, bottom: 6, left: 4 }
+                            margin: { top: -4 }
 
-                    //         draw_bg: {
-                    //             radius: 5
-                    //         }
+                            draw_bg: {
+                                radius: 5
+                            }
 
-                    //         draw_text:{
-                    //             text_style: <BOLD_FONT>{font_size: 14},
-                    //             color: #667085,
-                    //         }
-                    //         text: "..."
+                            draw_text:{
+                                text_style: <BOLD_FONT>{font_size: 14},
+                                color: #667085,
+                            }
+                            text: "..."
 
-                    //         reset_hover_on_click: false
-                    //     }
-                    // }
+                            reset_hover_on_click: false
+                        }
+                    }
                 }
             }
 
