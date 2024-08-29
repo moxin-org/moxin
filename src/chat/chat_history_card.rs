@@ -27,7 +27,7 @@ live_design! {
     EditTextInput = <MoxinTextInput> {
         width: Fill,
         height: Fit,
-        padding: 0,
+        padding: 6,
         empty_message: ""
 
         draw_label: {
@@ -92,7 +92,7 @@ live_design! {
 
         content = <RoundedView> {
             width: Fill
-            height: 52
+            height: Fit
             flow: Right
             padding: {left: 4, right: 4}
             spacing: 4
@@ -189,34 +189,33 @@ live_design! {
                             cancel = <CancelButton> {}
                         }
                     }
-
-                    chat_options_wrapper = <View> {
-                        width: Fit
-                        height: Fill
-                        padding: 4
-
-                        chat_options = <MoxinButton> {
-                            width: Fit
-                            height: Fit
-                            padding: { top: 0, right: 4, bottom: 6, left: 4 }
-                            margin: { top: -4 }
-
-                            draw_bg: {
-                                radius: 5
-                            }
-
-                            draw_text:{
-                                text_style: <BOLD_FONT>{font_size: 14},
-                                color: #667085,
-                            }
-                            text: "..."
-
-                            reset_hover_on_click: false
-                        }
-                    }
                 }
             }
 
+            chat_options_wrapper = <View> {
+                width: Fit
+                height: Fill
+                padding: 4
+
+                chat_options = <MoxinButton> {
+                    width: Fit
+                    height: Fit
+                    margin: {top: 10}
+                    padding: { top: 0, right: 4, bottom: 6, left: 4 }
+
+                    draw_bg: {
+                        radius: 5
+                    }
+
+                    draw_text:{
+                        text_style: <BOLD_FONT>{font_size: 12},
+                        color: #667085,
+                    }
+                    text: "..."
+
+                    reset_hover_on_click: false
+                }
+            }
             animator: {
                 hover = {
                     default: off
@@ -337,7 +336,7 @@ impl WidgetMatchEvent for ChatHistoryCard {
             let wrapper_coords = chat_options_wrapper_rect.pos;
             let coords = dvec2(
                 wrapper_coords.x,
-                wrapper_coords.y + chat_options_wrapper_rect.size.y,
+                wrapper_coords.y + chat_options_wrapper_rect.size.y - 16.0,
             );
 
             self.chat_history_card_options(id!(chat_history_card_options))
