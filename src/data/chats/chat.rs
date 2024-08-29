@@ -386,7 +386,7 @@ impl Chat {
 
                         // Give some time between posting partial updates
                         had_some_update = true;
-                        thread::sleep(Duration::from_millis(1000));
+                        thread::sleep(Duration::from_millis(500));
                         SignalToUI::set_ui_signal();
                     }
                     Ok(response) => {

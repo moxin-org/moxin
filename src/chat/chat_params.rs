@@ -34,7 +34,9 @@ live_design! {
     }
 
     ChatParams = {{ChatParams}} <MoxinTogglePanel> {
+        width: 110,
         open_content = {
+            draw_bg: {opacity: 0.0}
             <View> {
                 width: Fill
                 height: Fill
@@ -201,11 +203,13 @@ live_design! {
                     width: Fill
                 }
                 open = {
+                    visible: true,
                     draw_icon: {
                         svg_file: (ICON_OPEN_PANEL),
                     }
                 }
                 close = {
+                    visible: false,
                     draw_icon: {
                         svg_file: (ICON_CLOSE_PANEL),
                     }
@@ -214,6 +218,12 @@ live_design! {
         }
 
         tooltip = <Tooltip> {}
+
+        animator: {
+            panel = {
+                default: close,
+            }
+        }
     }
 }
 
