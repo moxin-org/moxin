@@ -9,18 +9,33 @@ live_design!(
     import crate::shared::styles::*;
     import crate::shared::widgets::*;
 
+    REASONER_AGENT_ICON = dep("crate://self/resources/images/reasoner_agent_icon.png")
+    RESEARCH_SCHOLAR_ICON = dep("crate://self/resources/images/research_scholar_agent_icon.png")
+    SEARCH_ASSISTANT_ICON = dep("crate://self/resources/images/search_assistant_agent_icon.png")
+
+    Avatar = <View> {
+        width: Fit,
+        height: Fit,
+        visible: false
+        padding: { left: 9 },
+        image = <Image> {
+            width: 24,
+            height: 24,
+        }
+    }
+
     AgentButton = {{AgentButton}} {
         flow: Overlay,
         align: { x: 0.0, y: 0.5 },
-        <View> {
-            width: Fit,
-            height: Fit,
-            padding: { left: 9 },
-            <Image> {
-                width: 24,
-                height: 24,
-                source: dep("crate://self/resources/images/agent.png")
-            }
+        reasoner_avatar = <Avatar> {
+            visible: true
+            image = { source: (REASONER_AGENT_ICON) }
+        }
+        research_scholar_avatar = <Avatar> {
+            image = { source: (RESEARCH_SCHOLAR_ICON) }
+        }
+        search_assistant_avatar = <Avatar> {
+            image = { source: (SEARCH_ASSISTANT_ICON) }
         }
         button = <MoxinButton> {
             flow: Right,
@@ -72,16 +87,35 @@ impl Widget for AgentButton {
 }
 
 impl AgentButton {
-    pub fn set_agent(&mut self, agent: MaeAgent) {
+    pub fn set_agent(&mut self, cx: &mut Cx, agent: MaeAgent) {
         self.set_text(&agent.name());
+
+        match agent {
+            MaeAgent::Reasoner => {
+                self.view(id!(reasoner_avatar)).set_visible(true);
+                self.view(id!(research_scholar_avatar)).set_visible(false);
+                self.view(id!(search_assistant_avatar)).set_visible(false);
+            },
+            MaeAgent::ResearchScholar => {
+                self.view(id!(reasoner_avatar)).set_visible(false);
+                self.view(id!(research_scholar_avatar)).set_visible(true);
+                self.view(id!(search_assistant_avatar)).set_visible(false);
+            }
+            MaeAgent::SearchAssistant => {
+                self.view(id!(reasoner_avatar)).set_visible(false);
+                self.view(id!(research_scholar_avatar)).set_visible(false);
+                self.view(id!(search_assistant_avatar)).set_visible(true);
+            }
+        };
+
         self.agent = Some(agent);
     }
 }
 
 impl AgentButtonRef {
-    pub fn set_agent(&mut self, agent: MaeAgent) {
+    pub fn set_agent(&mut self, cx: &mut Cx, agent: MaeAgent) {
         if let Some(mut inner) = self.borrow_mut() {
-            inner.set_agent(agent);
+            inner.set_agent(cx, agent);
         }
     }
 }
