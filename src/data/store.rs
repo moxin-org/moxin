@@ -63,7 +63,7 @@ impl Default for Store {
 
 impl Store {
     pub fn new() -> Self {
-        let preferences = Preferences::load();
+        let mut preferences = Preferences::load();
         let app_data_dir = project_dirs().data_dir();
 
         let backend = Rc::new(Backend::new(
@@ -72,15 +72,34 @@ impl Store {
             DEFAULT_MAX_DOWNLOAD_THREADS,
         ));
 
+        // Temporary solution to load API keys from environment variables
+        if std::env::var("MODEL_API_KEY").is_ok() {
+            preferences.open_ai_api_key = Some(std::env::var("MODEL_API_KEY").unwrap());
+        }
+        if std::env::var("SERPER_API_KEY").is_ok() {
+            preferences.serper_api_key = Some(std::env::var("SERPER_API_KEY").unwrap());
+        }
+        if std::env::var("AGENTOPS_API_KEY").is_ok() {
+            preferences.agentops_api_key = Some(std::env::var("AGENTOPS_API_KEY").unwrap());
+        }
+        preferences.save();
+        // End of temporary solution
+
         let mut options: HashMap<String, String> = HashMap::new();
         if let Some(api_key) = &preferences.open_ai_api_key {
             options.insert("model_api_key".to_string(), api_key.to_string());
+        } else {
+            eprintln!("No OpenAI API key found");
         }
         if let Some(api_key) = &preferences.serper_api_key {
             options.insert("serper_api_key".to_string(), api_key.to_string());
+        } else {
+            eprintln!("No Serper API key found");
         }
         if let Some(api_key) = &preferences.agentops_api_key {
             options.insert("agentops_api_key".to_string(), api_key.to_string());
+        } else {
+            eprintln!("No AgentOps API key found");
         }
 
         let mae_backend = MaeBackend::new(options);

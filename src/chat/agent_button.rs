@@ -90,20 +90,17 @@ impl AgentButton {
     pub fn set_agent(&mut self, cx: &mut Cx, agent: MaeAgent) {
         self.set_text(&agent.name());
 
+        self.view(id!(reasoner_avatar)).set_visible(false);
+        self.view(id!(research_scholar_avatar)).set_visible(false);
+        self.view(id!(search_assistant_avatar)).set_visible(false);
         match agent {
             MaeAgent::Reasoner => {
                 self.view(id!(reasoner_avatar)).set_visible(true);
-                self.view(id!(research_scholar_avatar)).set_visible(false);
-                self.view(id!(search_assistant_avatar)).set_visible(false);
             },
             MaeAgent::ResearchScholar => {
-                self.view(id!(reasoner_avatar)).set_visible(false);
                 self.view(id!(research_scholar_avatar)).set_visible(true);
-                self.view(id!(search_assistant_avatar)).set_visible(false);
             }
             MaeAgent::SearchAssistant => {
-                self.view(id!(reasoner_avatar)).set_visible(false);
-                self.view(id!(research_scholar_avatar)).set_visible(false);
                 self.view(id!(search_assistant_avatar)).set_visible(true);
             }
         };

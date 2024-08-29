@@ -47,6 +47,17 @@ live_design! {
         }
     }
 
+    Avatar = <View> {
+        width: Fit,
+        height: Fit,
+        visible: false,
+        image = <Image> {
+            width: 20,
+            height: 20,
+            margin: {right: 8}
+        }
+    }
+
     PromptInput = {{PromptInput}} {
         flow: Overlay,
         height: Fit,
@@ -104,11 +115,14 @@ live_design! {
                         color: #F2F4F7,
                         radius: 10.0,
                     }
-                    <Image> {
-                        width: 20,
-                        height: 20,
-                        margin: {right: 8}
-                        source: dep("crate://self/resources/images/search_assistant_agent_icon.png"),
+                    search_assistant_avatar = <Avatar> {
+                        image = {  source: dep("crate://self/resources/images/search_assistant_agent_icon.png") }
+                    }
+                    research_scholar_avatar = <Avatar> {
+                        image = { source: dep("crate://self/resources/images/research_scholar_agent_icon.png") }
+                    }
+                    reasoner_avatar = <Avatar> {
+                        image = { source: dep("crate://self/resources/images/reasoner_agent_icon.png") }
                     }
                     <Label> {
                         text: "Chat with "
@@ -259,6 +273,22 @@ impl PromptInput {
         self.agent_selected = Some(*agent);
         self.view(id!(agent_autocomplete)).set_visible(false);
         self.view(id!(selected_agent_bubble)).set_visible(true);
+
+        self.view(id!(search_assistant_avatar)).set_visible(false);
+        self.view(id!(research_scholar_avatar)).set_visible(false);
+        self.view(id!(reasoner_avatar)).set_visible(false);
+        match agent {
+            MaeAgent::SearchAssistant => {
+                self.view(id!(search_assistant_avatar)).set_visible(true);
+            }
+            MaeAgent::ResearchScholar => {
+                self.view(id!(research_scholar_avatar)).set_visible(true);
+            }
+            MaeAgent::Reasoner => {
+                self.view(id!(reasoner_avatar)).set_visible(true);
+            }
+        }
+
         self.label(id!(selected_agent_label))
             .set_text(&agent.name());
         // TODO: Remove the inserted @
