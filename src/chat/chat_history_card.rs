@@ -306,12 +306,15 @@ impl Widget for ChatHistoryCard {
             }
         }
 
-        self.set_title_text(chat.borrow_mut().get_title());
+        let caption = store.get_chat_entity_name(self.chat_id);
+        self.set_title_text(chat.borrow_mut().get_title(), &caption.clone().unwrap_or_default());
         self.update_title_visibility(cx);
 
-        let initial_letter = store
-            .get_last_used_file_initial_letter(self.chat_id)
-            .unwrap_or('A')
+        let initial_letter = caption
+            .unwrap_or("A".to_string())
+            .chars()
+            .next()
+            .unwrap()
             .to_uppercase()
             .to_string();
 
@@ -355,11 +358,7 @@ impl WidgetMatchEvent for ChatHistoryCard {
 
         if let Some(fe) = self.view(id!(content)).finger_down(actions) {
             if fe.tap_count == 1 {
-                cx.widget_action(
-                    widget_uid,
-                    &scope.path,
-                    ChatHistoryCardAction::ChatSelected,
-                );
+                cx.widget_action(widget_uid, &scope.path, ChatHistoryCardAction::ChatSelected);
                 let store = scope.data.get_mut::<Store>().unwrap();
                 store.chats.set_current_chat(self.chat_id);
                 self.redraw(cx);
@@ -387,11 +386,12 @@ impl ChatHistoryCard {
         }
     }
 
-    fn set_title_text(&mut self, text: &str) {
+    fn set_title_text(&mut self, text: &str, caption: &str) {
         self.view.label(id!(title_label)).set_text(text.trim());
         if let TitleState::Editable = self.title_edition_state {
             self.view.text_input(id!(title_input)).set_text(text.trim());
         }
+        self.label(id!(model_or_agent_name_label)).set_text(caption);
     }
 
     fn update_title_visibility(&mut self, cx: &mut Cx) {

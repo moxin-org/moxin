@@ -231,7 +231,7 @@ impl Store {
         }
     }
 
-    pub fn get_last_used_file_initial_letter(&self, chat_id: ChatID) -> Option<char> {
+    pub fn get_chat_entity_name(&self, chat_id: ChatID) -> Option<String> {
         let Some(chat) = self.chats.get_chat_by_id(chat_id) else {
             return None;
         };
@@ -242,10 +242,10 @@ impl Store {
                     .downloaded_files
                     .iter()
                     .find(|df| df.file.id == *file_id)
-                    .map(|df| df.file.name.chars().next())?
+                    .map(|df| Some(df.file.name.clone()))?
             }
             Some(ChatEntity::Agent(agent)) => {
-                agent.name().chars().next()
+                Some(agent.name())
             }
             None => None
         }

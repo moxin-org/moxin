@@ -458,7 +458,8 @@ impl WidgetMatchEvent for ChatPanel {
                 store.load_model(&downloaded_file.file);
 
                 if let Some(chat) = store.chats.get_current_chat() {
-                    chat.borrow_mut().last_used_entity = Some(ChatEntity::ModelFile(downloaded_file.file.id.clone()));
+                    chat.borrow_mut().last_used_entity =
+                        Some(ChatEntity::ModelFile(downloaded_file.file.id.clone()));
                     chat.borrow().save();
                 }
 
@@ -868,8 +869,11 @@ fn get_initial_letter(text: &str) -> Option<char> {
 
 fn get_model_initial_letter(store: &Store) -> Option<char> {
     let chat = get_chat(store)?;
-    let initial_letter = store.get_last_used_file_initial_letter(chat.borrow().id)?;
-    Some(initial_letter.to_ascii_uppercase())
+    let initial_letter = store
+        .get_chat_entity_name(chat.borrow().id)
+        .map(|name| name.chars().next())?;
+
+    initial_letter.map(|letter| letter.to_ascii_uppercase())
 }
 
 fn get_chat_messages(store: &Store) -> Option<Ref<Vec<ChatMessage>>> {
