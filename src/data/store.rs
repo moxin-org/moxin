@@ -1,4 +1,4 @@
-use super::chats::chat::ChatID;
+use super::chats::chat::{ChatEntity, ChatID};
 use super::filesystem::project_dirs;
 use super::preferences::Preferences;
 use super::search::SortCriteria;
@@ -235,15 +235,20 @@ impl Store {
         let Some(chat) = self.chats.get_chat_by_id(chat_id) else {
             return None;
         };
-        let Some(ref file_id) = chat.borrow().last_used_file_id else {
-            return None;
-        };
 
-        self.downloads
-            .downloaded_files
-            .iter()
-            .find(|df| df.file.id == *file_id)
-            .map(|df| df.file.name.chars().next())?
+        match chat.borrow().last_used_entity {
+            Some(ChatEntity::ModelFile(ref file_id)) => {
+                self.downloads
+                    .downloaded_files
+                    .iter()
+                    .find(|df| df.file.id == *file_id)
+                    .map(|df| df.file.name.chars().next())?
+            }
+            Some(ChatEntity::Agent(agent)) => {
+                agent.name().chars().next()
+            }
+            None => None
+        }
     }
 
     /// This function combines the search results information for a given model

@@ -9,7 +9,7 @@ use crate::{
         model_selector_list::ModelSelectorAction,
     },
     data::{
-        chats::chat::{Chat, ChatMessage},
+        chats::chat::{Chat, ChatEntity, ChatMessage},
         store::Store,
     },
     shared::actions::ChatAction,
@@ -458,7 +458,7 @@ impl WidgetMatchEvent for ChatPanel {
                 store.load_model(&downloaded_file.file);
 
                 if let Some(chat) = store.chats.get_current_chat() {
-                    chat.borrow_mut().last_used_file_id = Some(downloaded_file.file.id.clone());
+                    chat.borrow_mut().last_used_entity = Some(ChatEntity::ModelFile(downloaded_file.file.id.clone()));
                     chat.borrow().save();
                 }
 
@@ -862,8 +862,8 @@ fn get_chat(store: &Store) -> Option<&RefCell<Chat>> {
     store.chats.get_current_chat()
 }
 
-fn get_initial_letter(word: &str) -> Option<char> {
-    word.chars().next()
+fn get_initial_letter(text: &str) -> Option<char> {
+    text.chars().next()
 }
 
 fn get_model_initial_letter(store: &Store) -> Option<char> {

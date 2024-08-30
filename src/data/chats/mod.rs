@@ -2,9 +2,10 @@ pub mod chat;
 pub mod model_loader;
 
 use anyhow::{Context, Result};
-use chat::{Chat, ChatID};
+use chat::{Chat, ChatEntity, ChatID};
 use model_loader::ModelLoader;
 use moxin_backend::Backend;
+use moxin_mae::MaeAgent;
 use moxin_protocol::data::*;
 use moxin_protocol::protocol::Command;
 use std::fs;
@@ -61,10 +62,10 @@ impl Chats {
         self.cancel_chat_streaming();
 
         if let Some(mut chat) = self.get_current_chat().map(|c| c.borrow_mut()) {
-            let new_file_id = Some(file.id.clone());
+            let new_file_id = Some(ChatEntity::ModelFile(file.id.clone()));
 
-            if chat.last_used_file_id != new_file_id {
-                chat.last_used_file_id = new_file_id;
+            if chat.last_used_entity != new_file_id {
+                chat.last_used_entity = new_file_id;
                 chat.save();
             }
         }
@@ -146,13 +147,16 @@ impl Chats {
     ///
     /// If the fallback is used, the chat is updated with this, and persisted.
     pub fn get_or_init_chat_file_id(&self, chat: &mut Chat) -> Option<FileID> {
-        if let Some(file_id) = chat.last_used_file_id.clone() {
-            Some(file_id)
-        } else {
-            let file_id = self.loaded_model.as_ref().map(|m| m.id.clone())?;
-            chat.last_used_file_id = Some(file_id.clone());
-            chat.save();
-            Some(file_id)
+        match &chat.last_used_entity {
+            Some(ChatEntity::ModelFile(file_id)) => {
+                Some(file_id.clone())
+            }
+            _ => {
+                let file_id = self.loaded_model.as_ref().map(|m| m.id.clone())?;
+                chat.last_used_entity = Some(ChatEntity::ModelFile(file_id.clone()));
+                chat.save();
+                Some(file_id)
+            }
         }
     }
 
@@ -165,9 +169,17 @@ impl Chats {
         self.saved_chats.push(new_chat);
     }
 
+    pub fn create_empty_chat_with_agent(&mut self, agent: MaeAgent) {
+        self.create_empty_chat();
+        if let Some(mut chat) = self.get_current_chat().map(|c| c.borrow_mut()) {
+            chat.last_used_entity = Some(ChatEntity::Agent(agent));
+            chat.save();
+        }
+    }
+
     pub fn create_empty_chat_and_load_file(&mut self, file: &File) {
         let mut new_chat = Chat::new(self.chats_dir.clone());
-        new_chat.last_used_file_id = Some(file.id.clone());
+        new_chat.last_used_entity = Some(ChatEntity::ModelFile(file.id.clone()));
         new_chat.save();
 
         self.current_chat_id = Some(new_chat.id);

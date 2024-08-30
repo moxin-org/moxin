@@ -1,5 +1,5 @@
 use crate::{
-    data::store::Store,
+    data::{chats::chat::ChatEntity, store::Store},
     shared::{
         actions::ChatAction,
         utils::{format_model_size, hex_rgb_color},
@@ -385,12 +385,15 @@ impl ModelSelector {
         let is_loading = store.chats.model_loader.is_loading();
         let loaded_file = store.chats.loaded_model.as_ref();
 
-        let file = store
+        let chat_entity = store
             .chats
             .get_current_chat()
-            .and_then(|c| c.borrow().last_used_file_id.clone())
-            .and_then(|file_id| store.downloads.get_file(&file_id).cloned())
-            .or_else(|| loaded_file.cloned());
+            .and_then(|c| c.borrow().last_used_entity.clone());
+
+        let file = match chat_entity {
+            Some(ChatEntity::ModelFile(file_id)) => store.downloads.get_file(&file_id).cloned(),
+            _ => loaded_file.cloned(),
+        };
 
         if let Some(file) = file {
             let selected_view = self.view(id!(selected));
