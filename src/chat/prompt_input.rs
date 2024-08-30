@@ -3,7 +3,7 @@ use moxin_mae::{MaeAgent, MaeBackend};
 
 use crate::shared::computed_list::ComputedListWidgetExt;
 
-use super::agent_button::AgentButtonWidgetRefExt;
+use super::{agent_button::AgentButtonWidgetRefExt, shared::ChatAgentAvatarWidgetExt};
 
 #[derive(Debug, DefaultNone)]
 pub enum PromptInputAction {
@@ -20,6 +20,7 @@ live_design! {
     import crate::shared::widgets::*;
     import crate::shared::computed_list::*;
     import crate::chat::agent_button::*;
+    import crate::chat::shared::ChatAgentAvatar;
 
     ICON_PROMPT = dep("crate://self/resources/icons/prompt.svg")
     ICON_STOP = dep("crate://self/resources/icons/stop.svg")
@@ -44,17 +45,6 @@ live_design! {
         }
         icon_walk: {
             margin: {top: 0, left: -4},
-        }
-    }
-
-    Avatar = <View> {
-        width: Fit,
-        height: Fit,
-        visible: false,
-        image = <Image> {
-            width: 20,
-            height: 20,
-            margin: {right: 8}
         }
     }
 
@@ -115,14 +105,24 @@ live_design! {
                         color: #F2F4F7,
                         radius: 10.0,
                     }
-                    search_assistant_avatar = <Avatar> {
-                        image = {  source: dep("crate://self/resources/images/search_assistant_agent_icon.png") }
-                    }
-                    research_scholar_avatar = <Avatar> {
-                        image = { source: dep("crate://self/resources/images/research_scholar_agent_icon.png") }
-                    }
-                    reasoner_avatar = <Avatar> {
-                        image = { source: dep("crate://self/resources/images/reasoner_agent_icon.png") }
+                    agent_avatar = <ChatAgentAvatar> {
+                        width: Fit,
+                        height: Fit,
+                        reasoner_avatar = {
+                            image = {
+                                width: 20, height: 20, margin: {right: 8}
+                            }
+                        }
+                        research_scholar_avatar = {
+                            image = {
+                                width: 20, height: 20, margin: {right: 8}
+                            }
+                        }
+                        search_assistant_avatar = {
+                            image = {
+                                width: 20, height: 20, margin: {right: 8}
+                            }
+                        }
                     }
                     <Label> {
                         text: "Chat with "
@@ -274,20 +274,7 @@ impl PromptInput {
         self.view(id!(agent_autocomplete)).set_visible(false);
         self.view(id!(selected_agent_bubble)).set_visible(true);
 
-        self.view(id!(search_assistant_avatar)).set_visible(false);
-        self.view(id!(research_scholar_avatar)).set_visible(false);
-        self.view(id!(reasoner_avatar)).set_visible(false);
-        match agent {
-            MaeAgent::SearchAssistant => {
-                self.view(id!(search_assistant_avatar)).set_visible(true);
-            }
-            MaeAgent::ResearchScholar => {
-                self.view(id!(research_scholar_avatar)).set_visible(true);
-            }
-            MaeAgent::Reasoner => {
-                self.view(id!(reasoner_avatar)).set_visible(true);
-            }
-        }
+        self.chat_agent_avatar(id!(agent_avatar)).set_agent(agent);
 
         self.label(id!(selected_agent_label))
             .set_text(&agent.name());
@@ -305,7 +292,7 @@ impl LiveHook for PromptInput {
         let list = self.computed_list(id!(agent_autocomplete.list));
         list.compute_from(MaeBackend::available_agents().iter(), |agent| {
             let widget = WidgetRef::new_from_ptr(cx, self.agent_template);
-            widget.as_agent_button().set_agent(cx, *agent);
+            widget.as_agent_button().set_agent(cx, agent);
             widget
         });
         list.redraw(cx);

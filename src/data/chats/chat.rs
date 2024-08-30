@@ -25,11 +25,18 @@ pub enum ChatMessageAction {
     MaeAgentResult(String, MaeAgent),
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ChatEntity {
+    ModelFile(FileID),
+    Agent(MaeAgent),
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ChatMessage {
     pub id: usize,
     pub role: Role,
     pub username: Option<String>,
+    pub entity: Option<ChatEntity>,
     pub content: String,
 }
 
@@ -44,12 +51,6 @@ enum TitleState {
     #[default]
     Default,
     Updated,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum ChatEntity {
-    ModelFile(FileID),
-    Agent(MaeAgent),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -307,6 +308,7 @@ impl Chat {
             id: next_id,
             role: Role::User,
             username: None,
+            entity: None,
             content: prompt.clone(),
         });
 
@@ -314,6 +316,7 @@ impl Chat {
             id: next_id + 1,
             role: Role::Assistant,
             username: Some(wanted_file.name.clone()),
+            entity: Some(ChatEntity::ModelFile(wanted_file.id.clone())),
             content: "".to_string(),
         });
 
@@ -385,6 +388,7 @@ impl Chat {
             id: self.messages.len() + 1,
             role: Role::User,
             username: None,
+            entity: None,
             content: prompt,
         });
 
@@ -392,6 +396,7 @@ impl Chat {
             id: self.messages.len() + 1,
             role: Role::Assistant,
             username: Some(agent.name()),
+            entity: Some(ChatEntity::Agent(agent.clone())),
             content: "".to_string(),
         });
 

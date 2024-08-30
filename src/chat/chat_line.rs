@@ -1,8 +1,10 @@
 use crate::chat::chat_line_loading::ChatLineLoadingWidgetExt;
+use crate::chat::shared::ChatAgentAvatarWidgetExt;
 use makepad_widgets::markdown::MarkdownWidgetExt;
 use makepad_widgets::*;
 
 use makepad_markdown::parse_markdown;
+use moxin_mae::MaeAgent;
 
 live_design! {
     import makepad_widgets::base::*;
@@ -13,6 +15,8 @@ live_design! {
     import crate::shared::widgets::*;
     import crate::shared::resource_imports::*;
     import crate::chat::chat_line_loading::ChatLineLoading;
+    import crate::chat::shared::ChatModelAvatar;
+    import crate::chat::shared::ChatAgentAvatar;
 
     ICON_EDIT = dep("crate://self/resources/icons/edit.svg")
     ICON_DELETE = dep("crate://self/resources/icons/delete.svg")
@@ -211,6 +215,9 @@ live_design! {
             width: Fit,
             height: Fit,
             margin: {left: 20, right: 12},
+
+            model = <ChatModelAvatar> {}
+            agent = <ChatAgentAvatar> { visible: false }
         }
 
         main_section = <View> {
@@ -408,11 +415,22 @@ impl ChatLineRef {
         inner.label(id!(sender_name)).set_text(text);
     }
 
-    pub fn set_avatar_text(&mut self, text: &str) {
+    pub fn set_model_avatar_text(&mut self, text: &str) {
         let Some(mut inner) = self.borrow_mut() else {
             return;
         };
+        inner.view(id!(avatar_section.model)).set_visible(true);
+        inner.chat_agent_avatar(id!(avatar_section.agent)).set_visible(false);
         inner.label(id!(avatar_label)).set_text(text);
+    }
+
+    pub fn set_model_avatar(&mut self, agent: &MaeAgent) {
+        let Some(mut inner) = self.borrow_mut() else {
+            return;
+        };
+        inner.view(id!(avatar_section.model)).set_visible(false);
+        inner.chat_agent_avatar(id!(avatar_section.agent)).set_visible(true);
+        inner.chat_agent_avatar(id!(avatar_section.agent)).set_agent(agent);
     }
 
     pub fn set_message_text(&mut self, cx: &mut Cx, text: &str) {
