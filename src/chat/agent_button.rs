@@ -1,7 +1,9 @@
 use makepad_widgets::*;
 use moxin_mae::MaeAgent;
 
-use super::prompt_input::PromptInputAction;
+use crate::data::store::Store;
+
+use super::{chat_history_card::ChatHistoryCardAction, prompt_input::PromptInputAction};
 
 live_design!(
     import makepad_widgets::base::*;
@@ -64,17 +66,15 @@ pub struct AgentButton {
 
     #[rust]
     agent: Option<MaeAgent>,
+
+    #[live(false)]
+    create_new_chat: bool
 }
 
 impl Widget for AgentButton {
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
         self.view.handle_event(cx, event, scope);
-
-        if let Event::Actions(actions) = event {
-            if self.button(id!(button)).clicked(actions) {
-                cx.action(PromptInputAction::AgentSelected(self.agent.unwrap()))
-            }
-        }
+        self.widget_match_event(cx, event, scope);
     }
 
     fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, walk: Walk) -> DrawStep {
@@ -85,6 +85,31 @@ impl Widget for AgentButton {
         self.button(id!(button)).set_text(v);
     }
 }
+
+impl WidgetMatchEvent for AgentButton {
+    fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, scope: &mut Scope) {
+        let store = scope.data.get_mut::<Store>().unwrap();
+
+        let Some(agent) = self.agent else { return };
+
+        if self.button(id!(button)).clicked(actions) {
+            if self.create_new_chat {
+                store.chats.create_empty_chat_with_agent(agent);
+
+                // Make sure text input is focused and other necessary setup happens.
+                let widget_uid = self.widget_uid();
+                cx.widget_action(
+                    widget_uid,
+                    &scope.path,
+                    ChatHistoryCardAction::ChatSelected,
+                );
+            }
+
+            cx.action(PromptInputAction::AgentSelected(agent))
+        }
+    }
+}
+
 
 impl AgentButton {
     pub fn set_agent(&mut self, cx: &mut Cx, agent: MaeAgent) {

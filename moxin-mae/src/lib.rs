@@ -57,7 +57,7 @@ pub struct MaeResponseSearchAssistant {
     pub result: MaeResponseSearchAssistantResult,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
 pub enum MaeAgent {
     Reasoner,
     SearchAssistant,

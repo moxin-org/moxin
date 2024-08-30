@@ -1,16 +1,16 @@
 use anyhow::{anyhow, Result};
 use makepad_widgets::SignalToUI;
 use moxin_backend::Backend;
-use moxin_mae::{MaeAgent, MaeAgentResponse, MaeBackend};
 use moxin_mae::MaeAgentCommand::SendTask;
+use moxin_mae::{MaeAgent, MaeAgentResponse, MaeBackend};
 use moxin_protocol::data::{File, FileID};
 use moxin_protocol::open_ai::*;
 use moxin_protocol::protocol::Command;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::mpsc::{self, channel, Receiver, Sender};
 use std::thread;
 use std::time::Duration;
-use serde::{Deserialize, Serialize};
 
 use crate::data::filesystem::{read_from_file, write_to_file};
 
@@ -46,10 +46,16 @@ enum TitleState {
     Updated,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ChatEntity {
+    ModelFile(FileID),
+    Agent(MaeAgent),
+}
+
 #[derive(Serialize, Deserialize)]
 struct ChatData {
     id: ChatID,
-    last_used_file_id: Option<FileID>,
+    last_used_entity: Option<ChatEntity>,
     system_prompt: Option<String>,
     messages: Vec<ChatMessage>,
     title: String,
@@ -57,6 +63,9 @@ struct ChatData {
     title_state: TitleState,
     #[serde(default)]
     accessed_at: chrono::DateTime<chrono::Utc>,
+
+    // Legacy field, it can be removed in the future.
+    last_used_file_id: Option<FileID>,
 }
 
 #[derive(Debug)]
@@ -88,7 +97,7 @@ impl Default for ChatInferenceParams {
 pub struct Chat {
     /// Unix timestamp in ms.
     pub id: ChatID,
-    pub last_used_file_id: Option<FileID>,
+    pub last_used_entity: Option<ChatEntity>,
     pub messages: Vec<ChatMessage>,
     pub messages_update_sender: Sender<ChatMessageAction>,
     pub messages_update_receiver: Receiver<ChatMessageAction>,
@@ -116,7 +125,7 @@ impl Chat {
             messages: vec![],
             messages_update_sender: tx,
             messages_update_receiver: rx,
-            last_used_file_id: None,
+            last_used_entity: None,
             receiving_response: false,
             title_state: TitleState::default(),
             chats_dir,
@@ -132,9 +141,16 @@ impl Chat {
         match read_from_file(path) {
             Ok(json) => {
                 let data: ChatData = serde_json::from_str(&json)?;
+
+                // Fallback to last_used_file_id if last_used_entity is None.
+                // Until this field is removed, we need to keep this logic.
+                let chat_entity = data.last_used_entity.or_else(|| {
+                    data.last_used_file_id.map(|file_id| ChatEntity::ModelFile(file_id))
+                });
+
                 let chat = Chat {
                     id: data.id,
-                    last_used_file_id: data.last_used_file_id,
+                    last_used_entity: chat_entity,
                     messages: data.messages,
                     title: data.title,
                     title_state: data.title_state,
@@ -155,12 +171,15 @@ impl Chat {
     pub fn save(&self) {
         let data = ChatData {
             id: self.id,
-            last_used_file_id: self.last_used_file_id.clone(),
+            last_used_entity: self.last_used_entity.clone(),
             system_prompt: self.system_prompt.clone(),
             messages: self.messages.clone(),
             title: self.title.clone(),
             title_state: self.title_state,
             accessed_at: self.accessed_at,
+
+            // Legacy field, it can be removed in the future.
+            last_used_file_id: None,
         };
         let json = serde_json::to_string(&data).unwrap();
         let path = self.chats_dir.join(self.file_name());
@@ -350,9 +369,15 @@ impl Chat {
         self.update_title_based_on_first_message();
     }
 
-    pub fn send_message_to_agent(&mut self, agent: MaeAgent, prompt: String, mae_backend: &MaeBackend) {
+    pub fn send_message_to_agent(
+        &mut self,
+        agent: MaeAgent,
+        prompt: String,
+        mae_backend: &MaeBackend,
+    ) {
         let (tx, rx) = mpsc::channel();
-        mae_backend.command_sender
+        mae_backend
+            .command_sender
             .send(SendTask(prompt.clone(), agent.clone(), tx.clone()))
             .expect("failed to send message to agent");
 
@@ -371,6 +396,7 @@ impl Chat {
         });
 
         self.receiving_response = true;
+        self.last_used_entity = Some(ChatEntity::Agent(agent.clone()));
 
         let store_chat_tx = self.messages_update_sender.clone();
         std::thread::spawn(move || {
@@ -378,10 +404,14 @@ impl Chat {
             '_loop: loop {
                 match rx.recv() {
                     Ok(MaeAgentResponse::ResearchScholarUpdate(completed_step)) => {
-                        println!("Received ResearchScholarUpdate from agent: {:?}", completed_step);
+                        println!(
+                            "Received ResearchScholarUpdate from agent: {:?}",
+                            completed_step
+                        );
                         // TODO rename ModelAppendDelta if this is valid for models and agents
                         let _ = store_chat_tx.send(ChatMessageAction::ModelAppendDelta(
-                            MaeAgentResponse::ResearchScholarUpdate(completed_step).to_text_messgae(),
+                            MaeAgentResponse::ResearchScholarUpdate(completed_step)
+                                .to_text_messgae(),
                         ));
 
                         // Give some time between posting partial updates
@@ -411,6 +441,8 @@ impl Chat {
                 }
             }
         });
+
+        self.update_title_based_on_first_message();
     }
 
     pub fn cancel_streaming(&mut self, backend: &Backend) {
@@ -475,11 +507,23 @@ impl MaeAgentResponseFormatter for MaeAgentResponse {
             MaeAgentResponse::ReasonerResponse(response) => response.result.clone(),
             MaeAgentResponse::ResearchScholarResponse(response) => response.suggestion.clone(),
             MaeAgentResponse::SearchAssistantResponse(response) => {
-                let mut formatted = format!("{}\n\n",response.result.web_search_results);
+                let mut formatted = format!("{}\n\n", response.result.web_search_results);
 
-                let resouces_list = response.result.web_search_resource.iter().enumerate().map(|(i, r)| {
-                    format!("{}- [{}]({})\n", i + 1, r.name.replace("[", "\\[").replace("]", "\\]"), r.url)
-                }).collect::<Vec<String>>().join("\n\n");
+                let resouces_list = response
+                    .result
+                    .web_search_resource
+                    .iter()
+                    .enumerate()
+                    .map(|(i, r)| {
+                        format!(
+                            "{}- [{}]({})\n",
+                            i + 1,
+                            r.name.replace("[", "\\[").replace("]", "\\]"),
+                            r.url
+                        )
+                    })
+                    .collect::<Vec<String>>()
+                    .join("\n\n");
 
                 formatted.push_str(&resouces_list);
                 formatted
@@ -502,7 +546,7 @@ impl MaeAgentResponseFormatter for MaeAgentResponse {
                         format!("")
                     }
                 }
-            },
+            }
         }
     }
 }

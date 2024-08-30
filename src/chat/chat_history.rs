@@ -45,7 +45,7 @@ live_design! {
 
                     list = <PortalList> {
                         AgentHeading = <HeadingLabel> { text: "AGENTS" }
-                        Agent = <AgentButton> {}
+                        Agent = <AgentButton> { create_new_chat: true }
                         ChatsHeading = <HeadingLabel> { text: "CHATS", margin: {top: 10}, }
                         ChatHistoryCard = <ChatHistoryCard> {
                             padding: {top: 4}
@@ -57,12 +57,13 @@ live_design! {
         }
 
         persistent_content = {
+            margin: { left: -10 },
             default = {
                 after = {
                     new_chat_button = <MoxinButton> {
                         width: Fit,
                         height: Fit,
-                        icon_walk: {margin: { top: -1 }, width: 21, height: 21},
+                        icon_walk: {margin: { left: -6, top: -1 }, width: 21, height: 21},
                         draw_icon: {
                             svg_file: (ICON_NEW_CHAT),
                             fn get_color(self) -> vec4 {

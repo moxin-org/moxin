@@ -336,7 +336,7 @@ impl WidgetMatchEvent for ChatHistoryCard {
             let wrapper_coords = chat_options_wrapper_rect.pos;
             let coords = dvec2(
                 wrapper_coords.x,
-                wrapper_coords.y + chat_options_wrapper_rect.size.y - 16.0,
+                wrapper_coords.y + chat_options_wrapper_rect.size.y - 12.0,
             );
 
             self.chat_history_card_options(id!(chat_history_card_options))
