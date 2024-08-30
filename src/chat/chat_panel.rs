@@ -15,7 +15,10 @@ use crate::{
     shared::actions::ChatAction,
 };
 
-use super::{chat_history_card::ChatHistoryCardAction, prompt_input::PromptInputWidgetExt};
+use super::{
+    chat_history_card::ChatHistoryCardAction, prompt_input::PromptInputWidgetExt,
+    shared::ChatAgentAvatarWidgetRefExt,
+};
 
 live_design! {
     import makepad_widgets::base::*;
@@ -27,6 +30,7 @@ live_design! {
 
     import crate::chat::model_selector::ModelSelector;
     import crate::chat::chat_line::ChatLine;
+    import crate::chat::shared::ChatModelAvatar;
     import crate::chat::shared::ChatAgentAvatar;
     import crate::chat::prompt_input::PromptInput;
 
@@ -114,9 +118,6 @@ live_design! {
     }
 
     ModelChatLine = <ChatLine> {
-        avatar_section = {
-            <ChatAgentAvatar> {}
-        }
         main_section = {
             body_section = {
                 bubble = {
@@ -297,7 +298,12 @@ live_design! {
                 spacing: 30,
                 align: {x: 0.5, y: 0.5},
 
-                <ChatAgentAvatar> {}
+                avatar_section = <View> {
+                    width: Fit, height: Fit,
+                    model = <ChatModelAvatar> {}
+                    agent = <ChatAgentAvatar> { visible: false }
+                }
+
                 <Label> {
                     draw_text: {
                         text_style: <REGULAR_FONT>{font_size: 14},
@@ -743,9 +749,27 @@ impl ChatPanel {
             State::ModelSelectedWithEmptyChat { .. } => {
                 let store = scope.data.get::<Store>().unwrap();
 
-                self.view(id!(empty_conversation))
-                    .label(id!(avatar_label))
-                    .set_text(&get_model_initial_letter(store).unwrap_or('A').to_string());
+                let chat_entity = &get_chat(store).unwrap().borrow().last_used_entity;
+                match chat_entity {
+                    Some(ChatEntity::Agent(agent)) => {
+                        let empty_view = self.view(id!(empty_conversation));
+                        empty_view.view(id!(avatar_section.model)).set_visible(false);
+                        empty_view.chat_agent_avatar(id!(avatar_section.agent)).set_visible(true);
+
+                        empty_view
+                            .chat_agent_avatar(id!(avatar_section.agent))
+                            .set_agent(agent);
+                    }
+                    _ => {
+                        let empty_view = self.view(id!(empty_conversation));
+                        empty_view.view(id!(avatar_section.model)).set_visible(true);
+                        empty_view.chat_agent_avatar(id!(avatar_section.agent)).set_visible(false);
+
+                        empty_view
+                            .label(id!(avatar_label))
+                            .set_text(&get_model_initial_letter(store).unwrap_or('A').to_string());
+                    }
+                }
             }
             _ => {}
         }
@@ -817,8 +841,18 @@ impl ChatPanel {
                     let username = chat_line_data.username.as_ref().map_or("", String::as_str);
                     chat_line_item.set_sender_name(&username);
                     chat_line_item.set_regenerate_button_visible(false);
-                    chat_line_item
-                        .set_avatar_text(&get_initial_letter(username).unwrap().to_string());
+
+                    match chat_line_data.entity {
+                        Some(ChatEntity::Agent(agent)) => {
+                            chat_line_item.set_model_avatar(&agent);
+                        }
+                        Some(ChatEntity::ModelFile(_)) => {
+                            chat_line_item
+                                .set_model_avatar_text(&get_model_initial_letter(store).unwrap().to_string());
+                        }
+                        _ => {}
+                    }
+
                 } else {
                     item = list.item(cx, item_id, live_id!(UserChatLine)).unwrap();
                     chat_line_item = item.as_chat_line();
@@ -861,10 +895,6 @@ pub enum ChatPanelAction {
 
 fn get_chat(store: &Store) -> Option<&RefCell<Chat>> {
     store.chats.get_current_chat()
-}
-
-fn get_initial_letter(text: &str) -> Option<char> {
-    text.chars().next()
 }
 
 fn get_model_initial_letter(store: &Store) -> Option<char> {

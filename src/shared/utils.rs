@@ -36,3 +36,30 @@ pub fn hex_rgb_color(hex: u32) -> Vec4 {
     let b = (hex & 0xFF) as f32 / 255.0;
     vec4(r, g, b, 1.0)
 }
+
+/// Removes dashes, file extension, and capitalizes the first letter of each word.
+pub fn human_readable_name(model_filename: &str) -> String {
+    let name = model_filename
+        .to_lowercase()
+        .replace("-", " ")
+        .replace(".gguf", "")
+        .replace("chat.", " ")
+        .replace("chat", "")
+        .replace("_k", "_K")
+        .replace("_m", "_M")
+        .replace("_l", "_L");
+
+    let name = name
+        .split_whitespace()
+        .map(|word| {
+            let mut chars = word.chars();
+            match chars.next() {
+                None => String::new(),
+                Some(first_char) => first_char.to_uppercase().collect::<String>() + chars.as_str(),
+            }
+        })
+        .collect::<Vec<String>>()
+        .join(" ");
+
+    name
+}

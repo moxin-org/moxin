@@ -1,11 +1,11 @@
 use crate::{
-    data::{chats::chat::ChatID, store::Store},
-    shared::modal::ModalWidgetExt,
+    data::{chats::chat::{ChatEntity, ChatID}, store::Store},
+    shared::{modal::ModalWidgetExt, utils::human_readable_name},
 };
 
 use makepad_widgets::*;
 
-use super::delete_chat_modal::DeleteChatModalWidgetExt;
+use super::{delete_chat_modal::DeleteChatModalWidgetExt, shared::ChatAgentAvatarWidgetExt};
 use super::{
     chat_history_card_options::ChatHistoryCardOptionsWidgetExt,
     delete_chat_modal::DeleteChatModalAction,
@@ -18,6 +18,7 @@ live_design! {
     import crate::shared::styles::*;
     import crate::shared::widgets::*;
     import crate::shared::modal::*;
+    import crate::chat::shared::ChatModelAvatar;
     import crate::chat::shared::ChatAgentAvatar;
     import crate::chat::chat_history_card_options::ChatHistoryCardOptions;
     import crate::chat::delete_chat_modal::DeleteChatModal;
@@ -111,20 +112,10 @@ live_design! {
                 align: {y: 0.5}
                 padding: {left: 4}
 
-                avatar = <ChatAgentAvatar> {
-                    width: 26
-                    height: 26
-
-                    draw_bg: {
-                        radius: 6.5
-                    }
-                    avatar_label = {
-                        text: ""
-                        draw_text:{
-                            text_style: <BOLD_FONT>{font_size: 8},
-                            color: #fff,
-                        }
-                    }
+                avatar_section = <View> {
+                    width: Fit, height: Fit,
+                    model = <ChatModelAvatar> {}
+                    agent = <ChatAgentAvatar> { visible: false }
                 }
             }
             <View> {
@@ -307,7 +298,10 @@ impl Widget for ChatHistoryCard {
         }
 
         let caption = store.get_chat_entity_name(self.chat_id);
-        self.set_title_text(chat.borrow_mut().get_title(), &caption.clone().unwrap_or_default());
+        self.set_title_text(
+            chat.borrow_mut().get_title(),
+            &caption.clone().unwrap_or_default(),
+        );
         self.update_title_visibility(cx);
 
         let initial_letter = caption
@@ -318,8 +312,18 @@ impl Widget for ChatHistoryCard {
             .to_uppercase()
             .to_string();
 
-        let avatar_label = self.view.label(id!(avatar.avatar_label));
-        avatar_label.set_text(&initial_letter);
+        match chat.borrow().last_used_entity {
+            Some(ChatEntity::Agent(agent)) => {
+                self.view(id!(avatar_section.model)).set_visible(false);
+                self.chat_agent_avatar(id!(avatar_section.agent)).set_visible(true);
+                self.chat_agent_avatar(id!(avatar_section.agent)).set_agent(&agent);
+            }
+            _ => {
+                self.view(id!(avatar_section.model)).set_visible(true);
+                self.chat_agent_avatar(id!(avatar_section.agent)).set_visible(false);
+                self.view.label(id!(avatar_label)).set_text(&initial_letter);
+            }
+        }
 
         self.view.draw_walk(cx, scope, walk)
     }
@@ -391,7 +395,8 @@ impl ChatHistoryCard {
         if let TitleState::Editable = self.title_edition_state {
             self.view.text_input(id!(title_input)).set_text(text.trim());
         }
-        self.label(id!(model_or_agent_name_label)).set_text(caption);
+        self.label(id!(model_or_agent_name_label))
+            .set_text(&human_readable_name(caption));
     }
 
     fn update_title_visibility(&mut self, cx: &mut Cx) {

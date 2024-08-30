@@ -12,7 +12,7 @@ live_design! {
     import crate::shared::widgets::*;
     import makepad_draw::shader::std::*;
 
-    import crate::chat::shared::ChatAgentAvatar;
+    import crate::chat::shared::ChatModelAvatar;
     import crate::chat::chat_history_card::ChatHistoryCard;
     import crate::chat::agent_button::*;
 
@@ -131,7 +131,7 @@ impl Widget for ChatHistory {
                     if item_id < agents_count {
                         let agent = &agents[item_id];
                         let item = list.item(cx, item_id, live_id!(Agent)).unwrap();
-                        item.as_agent_button().set_agent(cx, *agent);
+                        item.as_agent_button().set_agent(cx, agent);
                         item.draw_all(cx, scope);
                         continue;
                     }
