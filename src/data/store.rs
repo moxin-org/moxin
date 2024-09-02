@@ -150,7 +150,7 @@ impl Store {
         }
     }
 
-    pub fn send_chat_message(&mut self, prompt: String) {
+    pub fn send_chat_message(&mut self, prompt: String, regenerate_from: Option<usize>) {
         if let Some(mut chat) = self.chats.get_current_chat().map(|c| c.borrow_mut()) {
             let wanted_file = self
                 .chats
@@ -159,11 +159,14 @@ impl Store {
                 .flatten();
 
             if let Some(file) = wanted_file {
+                if let Some(message_id) = regenerate_from {
+                    chat.remove_messages_from(message_id);
+                }
                 chat.send_message_to_model(
                     prompt,
                     file,
                     self.chats.model_loader.clone(),
-                    &self.backend,
+                    &self.backend
                 );
                 chat.save();
             }
@@ -174,40 +177,18 @@ impl Store {
         MaeBackend::available_agents()
     }
 
-    pub fn send_agent_message(&self, agent: MaeAgent, prompt: String) {
+    pub fn send_agent_message(&self, agent: MaeAgent, prompt: String, regenerate_from: Option<usize>) {
         if let Some(mut chat) = self.chats.get_current_chat().map(|c| c.borrow_mut()) {
+            if let Some(message_id) = regenerate_from {
+                chat.remove_messages_from(message_id);
+            }
             chat.send_message_to_agent(agent, prompt, &self.mae_backend);
-            chat.save();
         }
     }
 
     pub fn edit_chat_message(&mut self, message_id: usize, updated_message: String) {
         if let Some(mut chat) = self.chats.get_current_chat().map(|c| c.borrow_mut()) {
             chat.edit_message(message_id, updated_message);
-            chat.save();
-        }
-    }
-
-    // Enhancement: Would be ideal to just have a `regenerate_from` function` to be
-    // used after `edit_chat_message` and keep concerns separated.
-    pub fn edit_chat_message_regenerating(&mut self, message_id: usize, updated_message: String) {
-        if let Some(mut chat) = self.chats.get_current_chat().map(|c| c.borrow_mut()) {
-            let wanted_file = self
-                .chats
-                .get_chat_file_id(&mut chat)
-                .map(|file_id| self.downloads.get_file(&file_id))
-                .flatten();
-
-            if let Some(file) = wanted_file {
-                chat.remove_messages_from(message_id);
-                chat.send_message_to_model(
-                    updated_message,
-                    file,
-                    self.chats.model_loader.clone(),
-                    &self.backend,
-                );
-                chat.save();
-            }
         }
     }
 

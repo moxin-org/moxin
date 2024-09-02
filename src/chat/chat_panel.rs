@@ -397,7 +397,9 @@ impl Widget for ChatPanel {
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
         self.view.handle_event(cx, event, scope);
         self.widget_match_event(cx, event, scope);
-        self.update_state(scope);
+
+        let store = scope.data.get_mut::<Store>().unwrap();
+        self.update_state(store);
 
         if let Event::Signal = event {
             match self.state {
@@ -485,22 +487,6 @@ impl WidgetMatchEvent for ChatPanel {
                 _ => {}
             }
 
-            match action.cast() {
-                ChatLineAction::Delete(id) => {
-                    store.chats.delete_chat_message(id);
-                    self.redraw(cx);
-                }
-                ChatLineAction::Edit(id, updated, regenerate) => {
-                    if regenerate {
-                        store.edit_chat_message_regenerating(id, updated)
-                    } else {
-                        store.edit_chat_message(id, updated);
-                    }
-                    self.redraw(cx);
-                }
-                _ => {}
-            }
-
             if let ChatPanelAction::UnloadIfActive(file_id) = action.cast() {
                 if store
                     .chats
@@ -511,6 +497,23 @@ impl WidgetMatchEvent for ChatPanel {
                     store.chats.eject_model().expect("Failed to eject model");
                     self.unload_model(cx);
                 }
+            }
+
+            match action.cast() {
+                ChatLineAction::Delete(id) => {
+                    store.chats.delete_chat_message(id);
+                    self.redraw(cx);
+                }
+                ChatLineAction::Edit(id, updated, regenerate) => {
+                    if regenerate {
+                        self.send_message(cx, store, updated, Some(id));
+                        return;
+                    } else {
+                        store.edit_chat_message(id, updated);
+                    }
+                    self.redraw(cx);
+                }
+                _ => {}
             }
         }
 
@@ -551,10 +554,7 @@ impl WidgetMatchEvent for ChatPanel {
 }
 
 impl ChatPanel {
-    fn update_state(&mut self, scope: &mut Scope) {
-        let store = scope.data.get_mut::<Store>().unwrap();
-        //let loader = &store.chats.model_loader;
-
+    fn update_state(&mut self, store: &mut Store) {
         self.state = if store.downloads.downloaded_files.is_empty() {
             State::NoModelsAvailable
         } else if store.chats.loaded_model.is_none() {
@@ -716,41 +716,42 @@ impl ChatPanel {
             .button(id!(main_prompt_input.prompt_send_button))
             .clicked(&actions)
         {
-            self.send_message(cx, scope, prompt_input.text());
+            let store = scope.data.get_mut::<Store>().unwrap();
+            self.send_message(cx, store, prompt_input.text(), None);
         }
 
         if let Some(prompt) = prompt_input.returned(actions) {
-            self.send_message(cx, scope, prompt);
+            let store = scope.data.get_mut::<Store>().unwrap();
+            self.send_message(cx, store, prompt, None);
         }
     }
 
-    fn send_message(&mut self, cx: &mut Cx, scope: &mut Scope, prompt: String) {
+    fn send_message(&mut self, cx: &mut Cx, store: &mut Store, prompt: String, regenerate_from: Option<usize>) {
         // Check if we have any text to send
         if prompt.trim().is_empty() {
             return;
         }
 
         // Let's confirm we're in an appropriate state to send a message
-        self.update_state(scope);
+        self.update_state(store);
         if matches!(
             self.state,
             State::ModelSelectedWithChat {
                 receiving_response: false,
+                was_cancelled: false,
                 is_loading: false,
                 ..
             } | State::ModelSelectedWithEmptyChat { is_loading: false }
         ) {
-            let store = scope.data.get_mut::<Store>().unwrap();
-
             if let Some(agent_selected) = self
                 .prompt_input(id!(main_prompt_input))
                 .borrow()
                 .unwrap()
                 .agent_selected
             {
-                store.send_agent_message(agent_selected, prompt.clone());
+                store.send_agent_message(agent_selected, prompt.clone(), regenerate_from);
             } else {
-                store.send_chat_message(prompt.clone());
+                store.send_chat_message(prompt.clone(), regenerate_from);
             }
 
             let prompt_input = self.text_input(id!(main_prompt_input.prompt));
