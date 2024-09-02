@@ -1,9 +1,9 @@
 use makepad_widgets::*;
 use moxin_mae::{MaeAgent, MaeBackend};
 
-use crate::shared::computed_list::ComputedListWidgetExt;
+use crate::shared::{actions::ChatAction, computed_list::ComputedListWidgetExt};
 
-use super::{agent_button::AgentButtonWidgetRefExt, shared::ChatAgentAvatarWidgetExt};
+use super::{agent_button::AgentButtonWidgetRefExt, model_selector_list::ModelSelectorAction, shared::ChatAgentAvatarWidgetExt};
 
 #[derive(Debug, DefaultNone)]
 pub enum PromptInputAction {
@@ -230,23 +230,37 @@ impl Widget for PromptInput {
             }
         }
 
-        if let Event::Actions(actions) = event {
-            if let Some(current) = self.text_input(id!(prompt)).changed(actions) {
-                self.on_prompt_changed(current);
-            }
+        self.widget_match_event(cx, event, scope);
+    }
+}
 
-            if self.button(id!(agent_deselect_button)).clicked(actions) {
+impl WidgetMatchEvent for PromptInput {
+    fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, _scope: &mut Scope) {
+        if let Some(current) = self.text_input(id!(prompt)).changed(actions) {
+            self.on_prompt_changed(current);
+        }
+
+        if self.button(id!(agent_deselect_button)).clicked(actions) {
+            self.on_agent_deselected();
+        }
+
+        if let Some(action) = actions
+            .iter()
+            .find_map(|a| a.downcast_ref::<PromptInputAction>())
+        {
+            match action {
+                PromptInputAction::AgentSelected(agent) => self.on_agent_selected(agent),
+                PromptInputAction::None => {}
+            }
+        }
+
+        for action in actions.iter() {
+            if let ModelSelectorAction::Selected(_) = action.as_widget_action().cast() {
                 self.on_agent_deselected();
             }
 
-            if let Some(action) = actions
-                .iter()
-                .find_map(|a| a.downcast_ref::<PromptInputAction>())
-            {
-                match action {
-                    PromptInputAction::AgentSelected(agent) => self.on_agent_selected(agent),
-                    PromptInputAction::None => {}
-                }
+            if let ChatAction::Start(_) = action.as_widget_action().cast() {
+                self.on_agent_deselected();
             }
         }
     }
