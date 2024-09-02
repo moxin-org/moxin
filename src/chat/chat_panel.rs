@@ -428,10 +428,8 @@ impl Widget for ChatPanel {
         // (not having any effect).
         if self.focus_on_prompt_input_pending {
             self.focus_on_prompt_input_pending = false;
-            let prompt_input = self.text_input(id!(main_prompt_input.prompt));
-            prompt_input.set_text("");
-            prompt_input.set_cursor(0, 0);
-            prompt_input.set_key_focus(cx);
+
+            self.prompt_input(id!(main_prompt_input)).reset_text(cx, true);
         }
 
         let message_list_uid = self.portal_list(id!(chat)).widget_uid();
@@ -754,9 +752,7 @@ impl ChatPanel {
                 store.send_chat_message(prompt.clone(), regenerate_from);
             }
 
-            let prompt_input = self.text_input(id!(main_prompt_input.prompt));
-            prompt_input.set_text_and_redraw(cx, "");
-            prompt_input.set_cursor(0, 0);
+            self.prompt_input(id!(main_prompt_input)).reset_text(cx, false);
 
             // Scroll to the bottom when the message is sent
             self.scroll_messages_to_bottom(cx);
