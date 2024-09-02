@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use makepad_widgets::SignalToUI;
 use moxin_backend::Backend;
-use moxin_mae::MaeAgentCommand::SendTask;
+use moxin_mae::MaeAgentCommand::{self, SendTask};
 use moxin_mae::{MaeAgent, MaeAgentResponse, MaeBackend};
 use moxin_protocol::data::{File, FileID};
 use moxin_protocol::open_ai::*;
@@ -23,6 +23,7 @@ pub enum ChatMessageAction {
     ModelAppendDelta(String),
     ModelStreamingDone,
     MaeAgentResult(String, MaeAgent),
+    MaeAgentCancelled,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -51,6 +52,15 @@ enum TitleState {
     #[default]
     Default,
     Updated,
+}
+
+#[derive(Debug, Default)]
+enum ChatState {
+    #[default]
+    Idle,
+    Receiving,
+    // The boolean indicates if the last message should be removed.
+    Cancelled(bool),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -102,7 +112,7 @@ pub struct Chat {
     pub messages: Vec<ChatMessage>,
     pub messages_update_sender: Sender<ChatMessageAction>,
     pub messages_update_receiver: Receiver<ChatMessageAction>,
-    pub receiving_response: bool,
+    pub state: ChatState,
     pub inferences_params: ChatInferenceParams,
     pub system_prompt: Option<String>,
     pub accessed_at: chrono::DateTime<chrono::Utc>,
@@ -127,7 +137,7 @@ impl Chat {
             messages_update_sender: tx,
             messages_update_receiver: rx,
             last_used_entity: None,
-            receiving_response: false,
+            state: ChatState::Idle,
             title_state: TitleState::default(),
             chats_dir,
             inferences_params: ChatInferenceParams::default(),
@@ -146,7 +156,8 @@ impl Chat {
                 // Fallback to last_used_file_id if last_used_entity is None.
                 // Until this field is removed, we need to keep this logic.
                 let chat_entity = data.last_used_entity.or_else(|| {
-                    data.last_used_file_id.map(|file_id| ChatEntity::ModelFile(file_id))
+                    data.last_used_file_id
+                        .map(|file_id| ChatEntity::ModelFile(file_id))
                 });
 
                 let chat = Chat {
@@ -155,7 +166,7 @@ impl Chat {
                     messages: data.messages,
                     title: data.title,
                     title_state: data.title_state,
-                    receiving_response: false,
+                    state: ChatState::Idle,
                     messages_update_sender: tx,
                     messages_update_receiver: rx,
                     chats_dir,
@@ -320,7 +331,8 @@ impl Chat {
             content: "".to_string(),
         });
 
-        self.receiving_response = true;
+        self.state = ChatState::Receiving;
+        self.last_used_entity = Some(ChatEntity::ModelFile(wanted_file.id.clone()));
 
         let store_chat_tx = self.messages_update_sender.clone();
         let wanted_file = wanted_file.clone();
@@ -370,6 +382,7 @@ impl Chat {
         });
 
         self.update_title_based_on_first_message();
+        self.save();
     }
 
     pub fn send_message_to_agent(
@@ -400,7 +413,7 @@ impl Chat {
             content: "".to_string(),
         });
 
-        self.receiving_response = true;
+        self.state = ChatState::Receiving;
         self.last_used_entity = Some(ChatEntity::Agent(agent.clone()));
 
         let store_chat_tx = self.messages_update_sender.clone();
@@ -441,6 +454,9 @@ impl Chat {
                     }
                     Err(e) => {
                         println!("Error receiving response from agent: {:?}", e);
+                        let _ = store_chat_tx.send(ChatMessageAction::MaeAgentCancelled);
+
+                        SignalToUI::set_ui_signal();
                         break '_loop;
                     }
                 }
@@ -448,14 +464,38 @@ impl Chat {
         });
 
         self.update_title_based_on_first_message();
+        self.save();
     }
 
     pub fn cancel_streaming(&mut self, backend: &Backend) {
+        if matches!(self.state, ChatState::Idle | ChatState::Cancelled(_)) {
+            return;
+        }
+
         let (tx, _rx) = channel();
         let cmd = Command::StopChatCompletion(tx);
         backend.command_sender.send(cmd).unwrap();
 
-        makepad_widgets::log!("Cancel streaming");
+        let message = self.messages.last_mut().unwrap();
+        if message.content.trim().is_empty() {
+            self.state = ChatState::Cancelled(true);
+            message.content = "Cancelling, please wait...".to_string();
+        } else {
+            self.state = ChatState::Cancelled(false);
+        }
+    }
+
+    pub fn cancel_agent_interaction(&mut self, mae_backend: &MaeBackend) {
+        if matches!(self.state, ChatState::Idle | ChatState::Cancelled(_)) {
+            return;
+        }
+
+        let cmd = MaeAgentCommand::CancelTask;
+        mae_backend.command_sender.send(cmd).unwrap();
+
+        self.state = ChatState::Cancelled(true);
+        let message = self.messages.last_mut().unwrap();
+        message.content = "Cancelling, please wait...".to_string();
     }
 
     pub fn update_messages(&mut self) {
@@ -466,12 +506,21 @@ impl Chat {
                     last.content.push_str(&response);
                 }
                 ChatMessageAction::ModelStreamingDone => {
-                    self.receiving_response = false;
+                    if matches!(self.state, ChatState::Cancelled(true)) {
+                        // Remove the last message sent by the user if it was cancelled before getting any response
+                        self.messages.pop();
+                    }
+                    self.state = ChatState::Idle;
                 }
                 ChatMessageAction::MaeAgentResult(response, _agent) => {
                     let last = self.messages.last_mut().unwrap();
                     last.content = response;
-                    self.receiving_response = false;
+                    self.state = ChatState::Idle;
+                }
+                ChatMessageAction::MaeAgentCancelled => {
+                    self.state = ChatState::Idle;
+                    // Remove the last message sent by the user
+                    self.messages.pop();
                 }
             }
             self.save();
@@ -499,6 +548,14 @@ impl Chat {
 
     pub fn update_accessed_at(&mut self) {
         self.accessed_at = chrono::Utc::now();
+    }
+
+    pub fn is_receiving(&self) -> bool {
+        matches!(self.state, ChatState::Receiving)
+    }
+
+    pub fn was_cancelled(&self) -> bool {
+        matches!(self.state, ChatState::Cancelled(_))
     }
 }
 
