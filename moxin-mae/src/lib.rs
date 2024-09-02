@@ -80,9 +80,7 @@ impl MaeAgent {
 
     pub fn workflow(&self) -> MaeAgentWorkflow {
         match self {
-            MaeAgent::Reasoner => {
-                MaeAgentWorkflow::BasicReasoner("reasoner_agent.yml".to_string())
-            }
+            MaeAgent::Reasoner => MaeAgentWorkflow::BasicReasoner("reasoner_agent.yml".to_string()),
             MaeAgent::SearchAssistant => {
                 MaeAgentWorkflow::BasicReasoner("web_search_by_dspy.yml".to_string())
             }
@@ -97,7 +95,8 @@ impl MaeAgent {
                 MaeAgentResponse::ReasonerResponse(response)
             }
             MaeAgent::SearchAssistant => {
-                let response = serde_json::from_str::<MaeResponseSearchAssistant>(&response).unwrap();
+                let response =
+                    serde_json::from_str::<MaeResponseSearchAssistant>(&response).unwrap();
                 MaeAgentResponse::SearchAssistantResponse(response)
             }
             MaeAgent::ResearchScholar => {
@@ -122,7 +121,7 @@ pub enum MaeAgentResponse {
 
 pub enum MaeAgentCommand {
     SendTask(String, MaeAgent, mpsc::Sender<MaeAgentResponse>),
-    // CancelTask,
+    CancelTask,
 }
 
 pub struct MaeBackend {
@@ -233,16 +232,25 @@ impl MaeBackend {
                     sender_to_frontend = tx;
                     current_agent = agent;
                 }
+                MaeAgentCommand::CancelTask => {
+                    // Cancel this loop iteration and wait for the next command
+                    continue;
+                }
             }
 
             // Listen for events from reasoner to send the response to frontend
             let the_events = match current_agent {
-                MaeAgent::Reasoner => &mut events,
-                MaeAgent::SearchAssistant => &mut events,
+                MaeAgent::Reasoner | MaeAgent::SearchAssistant => &mut events,
                 MaeAgent::ResearchScholar => &mut paper_events,
             };
 
             '_while: while let Some(event) = the_events.recv() {
+                if Self::was_cancelled(&command_receiver) {
+                    // Cancel this loop iteration and wait for the next command
+                    // TODO send an input to the workflow to actually cancel the task in MAE
+                    break '_while;
+                }
+
                 match event {
                     Event::Input {
                         id,
@@ -291,6 +299,13 @@ impl MaeBackend {
         }
     }
 
+    fn was_cancelled(receiver: &mpsc::Receiver<MaeAgentCommand>) -> bool {
+        match receiver.try_recv() {
+            Ok(MaeAgentCommand::CancelTask) => true,
+            _ => false,
+        }
+    }
+
     // For testing purposes
     pub fn new_fake() -> Self {
         let (command_sender, command_receiver) = channel();
@@ -333,6 +348,7 @@ impl MaeBackend {
                                 .expect("failed to send command");
                         }
                     },
+                    _ => (),
                 }
             }
         });

@@ -47,7 +47,7 @@ pub struct Store {
     /// communicate with the backend thread.
     pub backend: Rc<Backend>,
 
-    pub mae_backend: MaeBackend,
+    pub mae_backend: Rc<MaeBackend>,
 
     pub search: Search,
     pub downloads: Downloads,
@@ -102,16 +102,16 @@ impl Store {
             eprintln!("No AgentOps API key found");
         }
 
-        let mae_backend = MaeBackend::new(options);
+        let mae_backend = Rc::new(MaeBackend::new(options));
         //let mae_backend = MaeBackend::new_fake();
 
         let mut store = Self {
             backend: backend.clone(),
-            mae_backend: mae_backend,
+            mae_backend: mae_backend.clone(),
 
             search: Search::new(backend.clone()),
             downloads: Downloads::new(backend.clone()),
-            chats: Chats::new(backend),
+            chats: Chats::new(backend, mae_backend),
             preferences,
         };
 
@@ -154,7 +154,7 @@ impl Store {
         if let Some(mut chat) = self.chats.get_current_chat().map(|c| c.borrow_mut()) {
             let wanted_file = self
                 .chats
-                .get_or_init_chat_file_id(&mut chat)
+                .get_chat_file_id(&mut chat)
                 .map(|file_id| self.downloads.get_file(&file_id))
                 .flatten();
 
@@ -194,7 +194,7 @@ impl Store {
         if let Some(mut chat) = self.chats.get_current_chat().map(|c| c.borrow_mut()) {
             let wanted_file = self
                 .chats
-                .get_or_init_chat_file_id(&mut chat)
+                .get_chat_file_id(&mut chat)
                 .map(|file_id| self.downloads.get_file(&file_id))
                 .flatten();
 

@@ -5,7 +5,7 @@ use anyhow::{Context, Result};
 use chat::{Chat, ChatEntity, ChatID};
 use model_loader::ModelLoader;
 use moxin_backend::Backend;
-use moxin_mae::MaeAgent;
+use moxin_mae::{MaeAgent, MaeBackend};
 use moxin_protocol::data::*;
 use moxin_protocol::protocol::Command;
 use std::fs;
@@ -16,6 +16,7 @@ use super::filesystem::setup_chats_folder;
 
 pub struct Chats {
     pub backend: Rc<Backend>,
+    pub mae_backend: Rc<MaeBackend>,
     pub saved_chats: Vec<RefCell<Chat>>,
 
     pub loaded_model: Option<File>,
@@ -26,9 +27,10 @@ pub struct Chats {
 }
 
 impl Chats {
-    pub fn new(backend: Rc<Backend>) -> Self {
+    pub fn new(backend: Rc<Backend>, mae_backend: Rc<MaeBackend>) -> Self {
         Self {
             backend,
+            mae_backend,
             saved_chats: Vec::new(),
             current_chat_id: None,
             loaded_model: None,
@@ -107,12 +109,15 @@ impl Chats {
 
     pub fn cancel_chat_streaming(&mut self) {
         if let Some(chat) = self.get_current_chat() {
-            chat.borrow_mut().cancel_streaming(self.backend.as_ref());
-            let mut chat = self.get_current_chat().unwrap().borrow_mut();
-            if let Some(message) = chat.messages.last_mut() {
-                if message.content.trim().is_empty() {
-                    chat.messages.pop();
+            let mut chat = chat.borrow_mut();
+            match chat.last_used_entity {
+                Some(ChatEntity::ModelFile(_)) => {
+                    chat.cancel_streaming(self.backend.as_ref());
                 }
+                Some(ChatEntity::Agent(_)) => {
+                    chat.cancel_agent_interaction(self.mae_backend.as_ref());
+                }
+                _ => {}
             }
         }
     }
@@ -144,17 +149,13 @@ impl Chats {
     /// Get the file id to use with this chat, or the loaded file id as a fallback.
     /// The fallback is used if the chat does not have a file id set, or, if it has
     /// one but references a no longer existing (deleted) file.
-    ///
-    /// If the fallback is used, the chat is updated with this, and persisted.
-    pub fn get_or_init_chat_file_id(&self, chat: &mut Chat) -> Option<FileID> {
+    pub fn get_chat_file_id(&self, chat: &mut Chat) -> Option<FileID> {
         match &chat.last_used_entity {
             Some(ChatEntity::ModelFile(file_id)) => {
                 Some(file_id.clone())
             }
             _ => {
                 let file_id = self.loaded_model.as_ref().map(|m| m.id.clone())?;
-                chat.last_used_entity = Some(ChatEntity::ModelFile(file_id.clone()));
-                chat.save();
                 Some(file_id)
             }
         }

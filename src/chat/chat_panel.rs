@@ -364,6 +364,7 @@ enum State {
         is_loading: bool,
         sticked_to_bottom: bool,
         receiving_response: bool,
+        was_cancelled: bool,
     },
 }
 
@@ -373,7 +374,8 @@ enum PromptInputMode {
 }
 enum PromptInputButton {
     Send,
-    Stop,
+    EnabledStop,
+    DisabledStop,
 }
 
 #[derive(Live, LiveHook, Widget)]
@@ -570,7 +572,8 @@ impl ChatPanel {
                             is_loading,
                             sticked_to_bottom: self.portal_list_end_reached
                                 || !matches!(self.state, State::ModelSelectedWithChat { .. }),
-                            receiving_response: chat.borrow().receiving_response,
+                            receiving_response: chat.borrow().is_receiving(),
+                            was_cancelled: chat.borrow().was_cancelled(),
                         }
                     }
                 },
@@ -590,6 +593,7 @@ impl ChatPanel {
             | State::ModelSelectedWithChat {
                 is_loading: false,
                 receiving_response: false,
+                was_cancelled: false,
                 ..
             } => {
                 self.activate_prompt_input(cx, PromptInputMode::Enabled, PromptInputButton::Send);
@@ -598,7 +602,13 @@ impl ChatPanel {
                 receiving_response: true,
                 ..
             } => {
-                self.activate_prompt_input(cx, PromptInputMode::Disabled, PromptInputButton::Stop);
+                self.activate_prompt_input(cx, PromptInputMode::Disabled, PromptInputButton::EnabledStop);
+            }
+            State::ModelSelectedWithChat {
+                was_cancelled: true,
+                ..
+            } => {
+                self.activate_prompt_input(cx, PromptInputMode::Disabled, PromptInputButton::DisabledStop);
             }
             _ => {
                 // Input prompts should not be visible in other conditions
@@ -650,8 +660,7 @@ impl ChatPanel {
                 );
                 stop_button.set_visible(false);
             }
-            PromptInputButton::Stop => {
-                // The stop button is always enabled, when visible
+            PromptInputButton::EnabledStop => {
                 stop_button.set_visible(true);
                 stop_button.set_enabled(true);
                 stop_button.apply_over(
@@ -659,6 +668,19 @@ impl ChatPanel {
                     live! {
                         draw_bg: {
                             color: #x000
+                        }
+                    },
+                );
+                send_button.set_visible(false);
+            }
+            PromptInputButton::DisabledStop => {
+                stop_button.set_visible(true);
+                stop_button.set_enabled(false);
+                stop_button.apply_over(
+                    cx,
+                    live! {
+                        draw_bg: {
+                            color: #D0D5DD
                         }
                     },
                 );

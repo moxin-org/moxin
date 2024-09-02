@@ -131,7 +131,7 @@ impl Widget for ChatHistory {
                     if item_id < agents_count {
                         let agent = &agents[item_id];
                         let item = list.item(cx, item_id, live_id!(Agent)).unwrap();
-                        item.as_agent_button().set_agent(cx, agent);
+                        item.as_agent_button().set_agent(agent);
                         item.draw_all(cx, scope);
                         continue;
                     }

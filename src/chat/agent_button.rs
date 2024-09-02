@@ -99,7 +99,7 @@ impl AgentButton {
 }
 
 impl AgentButtonRef {
-    pub fn set_agent(&mut self, cx: &mut Cx, agent: &MaeAgent) {
+    pub fn set_agent(&mut self, agent: &MaeAgent) {
         if let Some(mut inner) = self.borrow_mut() {
             inner.set_agent(agent);
         }
