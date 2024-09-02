@@ -299,6 +299,22 @@ impl LiveHook for PromptInput {
     }
 }
 
+impl PromptInputRef {
+    pub fn reset_text(&mut self, cx: &mut Cx, set_key_focus: bool) {
+        let Some(mut inner) = self.borrow_mut() else { return };
+
+        let prompt_input = inner.text_input(id!(prompt));
+        prompt_input.set_text("");
+        prompt_input.set_cursor(0, 0);
+
+        inner.prev_prompt.clear();
+
+        if set_key_focus {
+            prompt_input.set_key_focus(cx);
+        }
+    }
+}
+
 // workaround to detect if '@' was added to the prompt
 // this doesn't take into account mouse cursor position so it can give false positives
 // when copy-pasting text.
