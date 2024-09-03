@@ -3,7 +3,10 @@ use moxin_mae::MaeAgent;
 
 use crate::data::store::Store;
 
-use super::{chat_history_card::ChatHistoryCardAction, prompt_input::PromptInputAction, shared::ChatAgentAvatarWidgetExt};
+use super::{
+    chat_history_card::ChatHistoryCardAction, prompt_input::PromptInputAction,
+    shared::ChatAgentAvatarWidgetExt,
+};
 
 live_design!(
     import makepad_widgets::base::*;
@@ -99,7 +102,7 @@ pub struct AgentButton {
     agent: Option<MaeAgent>,
 
     #[live(false)]
-    create_new_chat: bool
+    create_new_chat: bool,
 }
 
 impl Widget for AgentButton {
@@ -148,7 +151,8 @@ impl AgentButton {
 
         self.view(id!(description)).set_visible(show_description);
         if show_description {
-            self.view(id!(description.label)).set_text(&agent.short_description());
+            self.view(id!(description.label))
+                .set_text(&agent.short_description());
         }
 
         self.agent = Some(*agent);
