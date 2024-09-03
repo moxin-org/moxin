@@ -425,11 +425,7 @@ impl PromptInput {
     }
 }
 
-impl LiveHook for PromptInput {
-    fn after_new_from_doc(&mut self, cx: &mut Cx) {
-        self.compute_agent_list(cx);
-    }
-}
+impl LiveHook for PromptInput {}
 
 impl PromptInputRef {
     pub fn reset_text(&mut self, cx: &mut Cx, set_key_focus: bool) {
