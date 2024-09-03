@@ -306,7 +306,7 @@ impl LiveHook for PromptInput {
         let list = self.computed_list(id!(agent_autocomplete.list));
         list.compute_from(MaeBackend::available_agents().iter(), |agent| {
             let widget = WidgetRef::new_from_ptr(cx, self.agent_template);
-            widget.as_agent_button().set_agent(agent);
+            widget.as_agent_button().set_agent(agent, true);
             widget
         });
         list.redraw(cx);

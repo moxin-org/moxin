@@ -3,8 +3,6 @@ use makepad_widgets::*;
 use moxin_protocol::data::DownloadedFile;
 use std::collections::HashMap;
 
-use super::prompt_input::PromptInputAction;
-
 live_design! {
     import makepad_widgets::base::*;
     import makepad_widgets::theme_desktop_dark::*;
