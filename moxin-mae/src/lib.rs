@@ -106,6 +106,14 @@ impl MaeAgent {
             }
         }
     }
+
+    pub fn short_description(&self) -> String {
+        match self {
+            MaeAgent::Reasoner => "I will reason for you".to_string(),
+            MaeAgent::SearchAssistant => "What should I search?".to_string(),
+            MaeAgent::ResearchScholar => "Let's study!".to_string(),
+        }
+    }
 }
 
 #[derive(Debug)]
