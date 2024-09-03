@@ -288,7 +288,7 @@ impl WidgetMatchEvent for PromptInput {
         }
 
         if let Some(current) = agent_search_input.returned(actions) {
-            self.on_agent_search_submit(current);
+            self.on_agent_search_submit(cx, current);
         }
 
         if self.button(id!(agent_deselect_button)).clicked(actions) {
@@ -300,7 +300,7 @@ impl WidgetMatchEvent for PromptInput {
             .find_map(|a| a.downcast_ref::<PromptInputAction>())
         {
             match action {
-                PromptInputAction::AgentSelected(agent) => self.on_agent_selected(agent),
+                PromptInputAction::AgentSelected(agent) => self.on_agent_selected(cx, agent),
                 PromptInputAction::None => {}
             }
         }
@@ -333,7 +333,7 @@ impl PromptInput {
         agent_autocomplete.set_visible(false);
     }
 
-    fn on_agent_selected(&mut self, agent: &MaeAgent) {
+    fn on_agent_selected(&mut self, cx: &mut Cx, agent: &MaeAgent) {
         self.agent_selected = Some(*agent);
         self.view(id!(agent_autocomplete)).set_visible(false);
         self.view(id!(selected_agent_bubble)).set_visible(true);
@@ -342,7 +342,10 @@ impl PromptInput {
 
         self.label(id!(selected_agent_label))
             .set_text(&agent.name());
+
         // TODO: Remove the inserted @
+
+        self.text_input(id!(prompt)).set_key_focus(cx);
     }
 
     fn on_agent_deselected(&mut self) {
@@ -358,11 +361,11 @@ impl PromptInput {
         self.compute_agent_list(cx);
     }
 
-    fn on_agent_search_submit(&mut self, current: String) {
+    fn on_agent_search_submit(&mut self, cx: &mut Cx, current: String) {
         let agents = MaeBackend::available_agents();
         let agents = agents.iter();
         if let Some(agent) = filter_agents(agents, &current).nth(self.agents_keyboard_focus_index) {
-            self.on_agent_selected(agent);
+            self.on_agent_selected(cx, agent);
         };
     }
 
