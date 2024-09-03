@@ -259,8 +259,14 @@ impl WidgetMatchEvent for PromptInput {
             self.on_prompt_changed(cx, current);
         }
 
-        if let Some(current) = self.text_input(id!(agent_search_input)).changed(actions) {
+        let agent_search_input = self.text_input(id!(agent_search_input));
+
+        if let Some(current) = agent_search_input.changed(actions) {
             self.on_agent_search_changed(cx, current);
+        }
+
+        if let Some(current) = agent_search_input.returned(actions) {
+            self.on_agent_search_submit(cx, current);
         }
 
         if self.button(id!(agent_deselect_button)).clicked(actions) {
@@ -334,22 +340,22 @@ impl PromptInput {
 
     fn compute_agent_list(&mut self, cx: &mut Cx, search: &str) {
         let list = self.computed_list(id!(agent_autocomplete.list));
-        let terms = search
-            .split_whitespace()
-            .map(|s| s.to_ascii_lowercase())
-            .collect::<Vec<_>>();
         let agents = MaeBackend::available_agents();
-        let agents = agents.iter().filter(|agent| {
-            terms
-                .iter()
-                .all(|term| agent.name().to_ascii_lowercase().contains(term))
-        });
+        let agents = filter_agents(agents.iter(), search);
 
         list.compute_from(agents, |agent| {
             let widget = WidgetRef::new_from_ptr(cx, self.agent_template);
             widget.as_agent_button().set_agent(agent, true);
             widget
         });
+    }
+
+    fn on_agent_search_submit(&mut self, cx: &mut Cx, current: String) {
+        let agents = MaeBackend::available_agents();
+        let agents = agents.iter();
+        if let Some(agent) = filter_agents(agents, &current).next() {
+            self.on_agent_selected(agent);
+        };
     }
 }
 
@@ -386,4 +392,20 @@ fn was_at_added(prev: &str, current: &str) -> bool {
         == prev.chars().filter(|c| *c == '@').count() + 1;
 
     char_added && at_added
+}
+
+fn filter_agents<'a, A: Iterator<Item = &'a MaeAgent>>(
+    agents: A,
+    search: &str,
+) -> impl Iterator<Item = &'a MaeAgent> {
+    let terms = search
+        .split_whitespace()
+        .map(|s| s.to_ascii_lowercase())
+        .collect::<Vec<_>>();
+
+    agents.filter(move |agent| {
+        terms
+            .iter()
+            .all(|term| agent.name().to_ascii_lowercase().contains(term))
+    })
 }
