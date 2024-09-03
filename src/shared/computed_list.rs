@@ -52,6 +52,11 @@ impl ComputedList {
     ) {
         self.items = iter.map(f).collect();
     }
+
+    /// Returns the number of items in the list.
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
 }
 
 impl ComputedListRef {
@@ -60,5 +65,10 @@ impl ComputedListRef {
         if let Some(mut inner) = self.borrow_mut() {
             inner.compute_from(iter, f);
         }
+    }
+
+    /// Calls `len` on the inner widget.
+    pub fn len(&self) -> usize {
+        self.borrow().map_or(0, |inner| inner.len())
     }
 }
