@@ -3,7 +3,10 @@ use moxin_mae::{MaeAgent, MaeBackend};
 
 use crate::shared::{actions::ChatAction, computed_list::ComputedListWidgetExt};
 
-use super::{agent_button::AgentButtonWidgetRefExt, model_selector_list::ModelSelectorAction, shared::ChatAgentAvatarWidgetExt};
+use super::{
+    agent_button::AgentButtonWidgetRefExt, model_selector_list::ModelSelectorAction,
+    shared::ChatAgentAvatarWidgetExt,
+};
 
 #[derive(Debug, DefaultNone)]
 pub enum PromptInputAction {
@@ -62,6 +65,7 @@ live_design! {
                 align: {x: 0.5, y: 1.0},
                 margin: {bottom: 10},
                 <RoundedView> {
+                    flow: Down,
                     height: Fit,
                     padding: {bottom: 12.0, top: 12.0, right: 6.0, left: 6.0}
                     show_bg: true,
@@ -70,6 +74,21 @@ live_design! {
                         border_color: #D0D5DD,
                         color: #fff,
                         radius: 5.0
+                    }
+
+                    agent_search_input = <MoxinTextInput> {
+                        width: Fill,
+                        height: Fit,
+                        margin: {bottom: 4},
+                        empty_message: "Search for an agent",
+                        draw_bg: {
+                            radius: 5.0,
+                            color: #fff
+                        }
+                        draw_text: {
+                            text_style: <REGULAR_FONT>{font_size: 10},
+                            color: #475467
+                        }
                     }
 
                     list = <ComputedList> { height: Fit }
@@ -237,7 +256,11 @@ impl Widget for PromptInput {
 impl WidgetMatchEvent for PromptInput {
     fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, _scope: &mut Scope) {
         if let Some(current) = self.text_input(id!(prompt)).changed(actions) {
-            self.on_prompt_changed(current);
+            self.on_prompt_changed(cx, current);
+        }
+
+        if let Some(current) = self.text_input(id!(agent_search_input)).changed(actions) {
+            self.on_agent_search_changed(cx, current);
         }
 
         if self.button(id!(agent_deselect_button)).clicked(actions) {
@@ -267,10 +290,11 @@ impl WidgetMatchEvent for PromptInput {
 }
 
 impl PromptInput {
-    fn on_prompt_changed(&mut self, current: String) {
+    fn on_prompt_changed(&mut self, cx: &mut Cx, current: String) {
         let agent_autocomplete = self.view(id!(agent_autocomplete));
         if was_at_added(&self.prev_prompt, &current) {
             agent_autocomplete.set_visible(true);
+            self.text_input(id!(agent_search_input)).set_key_focus(cx);
         } else {
             agent_autocomplete.set_visible(false);
         }
@@ -299,23 +323,47 @@ impl PromptInput {
         self.agent_selected = None;
         self.view(id!(selected_agent_bubble)).set_visible(false);
     }
-}
 
-impl LiveHook for PromptInput {
-    fn after_new_from_doc(&mut self, cx: &mut Cx) {
+    fn on_agent_search_changed(&mut self, cx: &mut Cx, search: String) {
+        // disallow multiline input
+        self.text_input(id!(agent_search_input))
+            .set_text(&search.replace("\n", " "));
+
+        self.compute_agent_list(cx, &search);
+    }
+
+    fn compute_agent_list(&mut self, cx: &mut Cx, search: &str) {
         let list = self.computed_list(id!(agent_autocomplete.list));
-        list.compute_from(MaeBackend::available_agents().iter(), |agent| {
+        let terms = search
+            .split_whitespace()
+            .map(|s| s.to_ascii_lowercase())
+            .collect::<Vec<_>>();
+        let agents = MaeBackend::available_agents();
+        let agents = agents.iter().filter(|agent| {
+            terms
+                .iter()
+                .all(|term| agent.name().to_ascii_lowercase().contains(term))
+        });
+
+        list.compute_from(agents, |agent| {
             let widget = WidgetRef::new_from_ptr(cx, self.agent_template);
             widget.as_agent_button().set_agent(agent, true);
             widget
         });
-        list.redraw(cx);
+    }
+}
+
+impl LiveHook for PromptInput {
+    fn after_new_from_doc(&mut self, cx: &mut Cx) {
+        self.compute_agent_list(cx, "");
     }
 }
 
 impl PromptInputRef {
     pub fn reset_text(&mut self, cx: &mut Cx, set_key_focus: bool) {
-        let Some(mut inner) = self.borrow_mut() else { return };
+        let Some(mut inner) = self.borrow_mut() else {
+            return;
+        };
 
         let prompt_input = inner.text_input(id!(prompt));
         prompt_input.set_text("");
