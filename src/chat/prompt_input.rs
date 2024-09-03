@@ -236,6 +236,9 @@ pub struct PromptInput {
     prev_prompt: String,
 
     #[rust]
+    agents_keyboard_focus_index: usize,
+
+    #[rust]
     pub agent_selected: Option<MaeAgent>,
 }
 
@@ -250,6 +253,21 @@ impl Widget for PromptInput {
         if let Event::KeyUp(key_event) = event {
             if key_event.key_code == KeyCode::Escape {
                 self.on_escape();
+            }
+        }
+
+        // TODO: This should actually be "when the agent search input is focused"
+        if self.view(id!(agent_autocomplete)).visible() {
+            if let Event::KeyDown(key_event) = event {
+                let delta = match key_event.key_code {
+                    KeyCode::ArrowDown => 1,
+                    KeyCode::ArrowUp => -1,
+                    _ => 0,
+                };
+
+                if delta != 0 {
+                    self.on_agent_search_keyboard_move(cx, delta);
+                }
             }
         }
 
@@ -337,21 +355,22 @@ impl PromptInput {
         self.text_input(id!(agent_search_input))
             .set_text(&search.replace("\n", " "));
 
-        self.compute_agent_list(cx, &search);
+        self.compute_agent_list(cx);
     }
 
     fn on_agent_search_submit(&mut self, current: String) {
         let agents = MaeBackend::available_agents();
         let agents = agents.iter();
-        if let Some(agent) = filter_agents(agents, &current).next() {
+        if let Some(agent) = filter_agents(agents, &current).nth(self.agents_keyboard_focus_index) {
             self.on_agent_selected(agent);
         };
     }
 
-    fn compute_agent_list(&mut self, cx: &mut Cx, search: &str) {
+    fn compute_agent_list(&mut self, cx: &mut Cx) {
+        let search = self.text_input(id!(agent_search_input)).text();
         let list = self.computed_list(id!(agent_autocomplete.list));
         let agents = MaeBackend::available_agents();
-        let agents = filter_agents(agents.iter(), search);
+        let agents = filter_agents(agents.iter(), &search);
 
         list.compute_from(agents.enumerate(), |(idx, agent)| {
             let widget = WidgetRef::new_from_ptr(cx, self.agent_template);
@@ -359,7 +378,7 @@ impl PromptInput {
             let mut btn = widget.agent_button(id!(button));
             btn.set_agent(agent, true);
 
-            if idx == 0 {
+            if idx == self.agents_keyboard_focus_index {
                 widget.apply_over(
                     cx,
                     live! {
@@ -377,7 +396,7 @@ impl PromptInput {
 
     fn show_agent_autocomplete(&mut self, cx: &mut Cx) {
         self.view(id!(agent_autocomplete)).set_visible(true);
-        self.compute_agent_list(cx, "");
+        self.compute_agent_list(cx);
         self.text_input(id!(agent_search_input)).set_key_focus(cx);
     }
 
@@ -385,11 +404,26 @@ impl PromptInput {
         self.view(id!(agent_autocomplete)).set_visible(false);
         self.text_input(id!(agent_search_input)).set_text("");
     }
+
+    fn on_agent_search_keyboard_move(&mut self, cx: &mut Cx, delta: i32) {
+        let agents_len = MaeBackend::available_agents().len();
+
+        if agents_len == 0 {
+            return;
+        }
+
+        self.agents_keyboard_focus_index = self
+            .agents_keyboard_focus_index
+            .saturating_add_signed(delta as isize)
+            .clamp(0, agents_len - 1);
+
+        self.compute_agent_list(cx);
+    }
 }
 
 impl LiveHook for PromptInput {
     fn after_new_from_doc(&mut self, cx: &mut Cx) {
-        self.compute_agent_list(cx, "");
+        self.compute_agent_list(cx);
     }
 }
 
