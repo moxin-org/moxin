@@ -410,16 +410,16 @@ impl PromptInput {
     }
 
     fn on_agent_search_keyboard_move(&mut self, cx: &mut Cx, delta: i32) {
-        let agents_len = MaeBackend::available_agents().len();
+        let items_len = self.computed_list(id!(agent_autocomplete.list)).len();
 
-        if agents_len == 0 {
+        if items_len == 0 {
             return;
         }
 
         self.agents_keyboard_focus_index = self
             .agents_keyboard_focus_index
             .saturating_add_signed(delta as isize)
-            .clamp(0, agents_len - 1);
+            .clamp(0, items_len - 1);
 
         self.compute_agent_list(cx);
     }
