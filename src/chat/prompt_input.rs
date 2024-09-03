@@ -54,7 +54,11 @@ live_design! {
     PromptInput = {{PromptInput}} {
         flow: Overlay,
         height: Fit,
-        agent_template: <AgentButton> {}
+        agent_template: <View> {
+            width: Fill,
+            height: Fit,
+            button = <AgentButton> {}
+        }
 
         <View> {
             flow: Down,
@@ -266,7 +270,7 @@ impl WidgetMatchEvent for PromptInput {
         }
 
         if let Some(current) = agent_search_input.returned(actions) {
-            self.on_agent_search_submit(cx, current);
+            self.on_agent_search_submit(current);
         }
 
         if self.button(id!(agent_deselect_button)).clicked(actions) {
@@ -336,7 +340,7 @@ impl PromptInput {
         self.compute_agent_list(cx, &search);
     }
 
-    fn on_agent_search_submit(&mut self, cx: &mut Cx, current: String) {
+    fn on_agent_search_submit(&mut self, current: String) {
         let agents = MaeBackend::available_agents();
         let agents = agents.iter();
         if let Some(agent) = filter_agents(agents, &current).next() {
@@ -349,9 +353,24 @@ impl PromptInput {
         let agents = MaeBackend::available_agents();
         let agents = filter_agents(agents.iter(), search);
 
-        list.compute_from(agents, |agent| {
+        list.compute_from(agents.enumerate(), |(idx, agent)| {
             let widget = WidgetRef::new_from_ptr(cx, self.agent_template);
-            widget.as_agent_button().set_agent(agent, true);
+
+            let mut btn = widget.agent_button(id!(button));
+            btn.set_agent(agent, true);
+
+            if idx == 0 {
+                widget.apply_over(
+                    cx,
+                    live! {
+                        show_bg: true,
+                        draw_bg: {
+                            color: #EAECEFff,
+                        }
+                    },
+                );
+            }
+
             widget
         });
     }
