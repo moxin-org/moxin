@@ -102,8 +102,8 @@ impl Store {
             eprintln!("No AgentOps API key found");
         }
 
-        let mae_backend = Rc::new(MaeBackend::new(options));
-        //let mae_backend = MaeBackend::new_fake();
+        //let mae_backend = Rc::new(MaeBackend::new(options));
+        let mae_backend = Rc::new(MaeBackend::new_fake());
 
         let mut store = Self {
             backend: backend.clone(),
@@ -218,17 +218,14 @@ impl Store {
         };
 
         match chat.borrow().last_used_entity {
-            Some(ChatEntity::ModelFile(ref file_id)) => {
-                self.downloads
-                    .downloaded_files
-                    .iter()
-                    .find(|df| df.file.id == *file_id)
-                    .map(|df| Some(df.file.name.clone()))?
-            }
-            Some(ChatEntity::Agent(agent)) => {
-                Some(agent.name())
-            }
-            None => None
+            Some(ChatEntity::ModelFile(ref file_id)) => self
+                .downloads
+                .downloaded_files
+                .iter()
+                .find(|df| df.file.id == *file_id)
+                .map(|df| Some(df.file.name.clone()))?,
+            Some(ChatEntity::Agent(agent)) => Some(agent.name()),
+            None => None,
         }
     }
 
