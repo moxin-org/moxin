@@ -297,12 +297,10 @@ impl WidgetMatchEvent for PromptInput {
 
 impl PromptInput {
     fn on_prompt_changed(&mut self, cx: &mut Cx, current: String) {
-        let agent_autocomplete = self.view(id!(agent_autocomplete));
         if was_at_added(&self.prev_prompt, &current) {
-            agent_autocomplete.set_visible(true);
-            self.text_input(id!(agent_search_input)).set_key_focus(cx);
+            self.show_agent_autocomplete(cx);
         } else {
-            agent_autocomplete.set_visible(false);
+            self.hide_agent_autocomplete();
         }
 
         self.prev_prompt = current;
@@ -338,6 +336,14 @@ impl PromptInput {
         self.compute_agent_list(cx, &search);
     }
 
+    fn on_agent_search_submit(&mut self, cx: &mut Cx, current: String) {
+        let agents = MaeBackend::available_agents();
+        let agents = agents.iter();
+        if let Some(agent) = filter_agents(agents, &current).next() {
+            self.on_agent_selected(agent);
+        };
+    }
+
     fn compute_agent_list(&mut self, cx: &mut Cx, search: &str) {
         let list = self.computed_list(id!(agent_autocomplete.list));
         let agents = MaeBackend::available_agents();
@@ -350,12 +356,15 @@ impl PromptInput {
         });
     }
 
-    fn on_agent_search_submit(&mut self, cx: &mut Cx, current: String) {
-        let agents = MaeBackend::available_agents();
-        let agents = agents.iter();
-        if let Some(agent) = filter_agents(agents, &current).next() {
-            self.on_agent_selected(agent);
-        };
+    fn show_agent_autocomplete(&mut self, cx: &mut Cx) {
+        self.view(id!(agent_autocomplete)).set_visible(true);
+        self.compute_agent_list(cx, "");
+        self.text_input(id!(agent_search_input)).set_key_focus(cx);
+    }
+
+    fn hide_agent_autocomplete(&mut self) {
+        self.view(id!(agent_autocomplete)).set_visible(false);
+        self.text_input(id!(agent_search_input)).set_text("");
     }
 }
 
@@ -375,6 +384,7 @@ impl PromptInputRef {
         prompt_input.set_text("");
         prompt_input.set_cursor(0, 0);
 
+        inner.hide_agent_autocomplete();
         inner.prev_prompt.clear();
 
         if set_key_focus {
