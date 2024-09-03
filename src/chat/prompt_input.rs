@@ -403,6 +403,7 @@ impl PromptInput {
     fn hide_agent_autocomplete(&mut self) {
         self.view(id!(agent_autocomplete)).set_visible(false);
         self.text_input(id!(agent_search_input)).set_text("");
+        self.agents_keyboard_focus_index = 0;
     }
 
     fn on_agent_search_keyboard_move(&mut self, cx: &mut Cx, delta: i32) {
