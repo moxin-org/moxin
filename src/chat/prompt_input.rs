@@ -244,12 +244,16 @@ pub struct PromptInput {
     agents_search_pending_focus: bool,
 
     #[rust]
+    prompt_pending_focus: bool,
+
+    #[rust]
     pub agent_selected: Option<MaeAgent>,
 }
 
 impl Widget for PromptInput {
     fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, walk: Walk) -> DrawStep {
         while !self.deref.draw_walk(cx, scope, walk).is_done() {}
+
         if self.agents_search_pending_focus {
             self.agents_search_pending_focus = false;
 
@@ -257,6 +261,15 @@ impl Widget for PromptInput {
             agent_search_input.set_cursor(0, 0);
             agent_search_input.set_key_focus(cx);
         }
+
+        if self.prompt_pending_focus {
+            self.prompt_pending_focus = false;
+
+            let prompt = self.text_input(id!(prompt));
+            prompt.set_cursor(0, 0);
+            prompt.set_key_focus(cx);
+        }
+
         DrawStep::done()
     }
 
@@ -301,7 +314,7 @@ impl WidgetMatchEvent for PromptInput {
         }
 
         if let Some(current) = agent_search_input.returned(actions) {
-            self.on_agent_search_submit(cx, current);
+            self.on_agent_search_submit(current);
         }
 
         if self.button(id!(agent_deselect_button)).clicked(actions) {
@@ -313,7 +326,7 @@ impl WidgetMatchEvent for PromptInput {
             .find_map(|a| a.downcast_ref::<PromptInputAction>())
         {
             match action {
-                PromptInputAction::AgentSelected(agent) => self.on_agent_selected(cx, agent),
+                PromptInputAction::AgentSelected(agent) => self.on_agent_selected(agent),
                 PromptInputAction::None => {}
             }
         }
@@ -346,7 +359,7 @@ impl PromptInput {
         agent_autocomplete.set_visible(false);
     }
 
-    fn on_agent_selected(&mut self, cx: &mut Cx, agent: &MaeAgent) {
+    fn on_agent_selected(&mut self, agent: &MaeAgent) {
         self.agent_selected = Some(*agent);
         self.view(id!(agent_autocomplete)).set_visible(false);
         self.view(id!(selected_agent_bubble)).set_visible(true);
@@ -358,7 +371,7 @@ impl PromptInput {
 
         // TODO: Remove the inserted @
 
-        self.text_input(id!(prompt)).set_key_focus(cx);
+        self.prompt_pending_focus = true;
     }
 
     fn on_agent_deselected(&mut self) {
@@ -374,11 +387,11 @@ impl PromptInput {
         self.compute_agent_list(cx);
     }
 
-    fn on_agent_search_submit(&mut self, cx: &mut Cx, current: String) {
+    fn on_agent_search_submit(&mut self, current: String) {
         let agents = MaeBackend::available_agents();
         let agents = agents.iter();
         if let Some(agent) = filter_agents(agents, &current).nth(self.agents_keyboard_focus_index) {
-            self.on_agent_selected(cx, agent);
+            self.on_agent_selected(agent);
         };
     }
 
