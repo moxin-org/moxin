@@ -57,6 +57,8 @@ live_design! {
         agent_template: <View> {
             width: Fill,
             height: Fit,
+            show_bg: true,
+
             button = <AgentButton> {}
         }
 
@@ -396,7 +398,6 @@ impl PromptInput {
                 widget.apply_over(
                     cx,
                     live! {
-                        show_bg: true,
                         draw_bg: {
                             color: #EAECEFff,
                         }
