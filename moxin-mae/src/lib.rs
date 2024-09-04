@@ -78,6 +78,14 @@ impl MaeAgent {
         }
     }
 
+    pub fn short_description(&self) -> String {
+        match self {
+            MaeAgent::Reasoner => "Helps to find good questions about any topic".to_string(),
+            MaeAgent::SearchAssistant => "Your assistant to find information on the web".to_string(),
+            MaeAgent::ResearchScholar => "Expert in academic research".to_string(),
+        }
+    }
+
     pub fn workflow(&self) -> MaeAgentWorkflow {
         match self {
             MaeAgent::Reasoner => MaeAgentWorkflow::BasicReasoner("reasoner_agent.yml".to_string()),
@@ -104,14 +112,6 @@ impl MaeAgent {
                     serde_json::from_str::<MaeResponseResearchScholar>(&response).unwrap();
                 MaeAgentResponse::ResearchScholarResponse(response)
             }
-        }
-    }
-
-    pub fn short_description(&self) -> String {
-        match self {
-            MaeAgent::Reasoner => "I will reason for you".to_string(),
-            MaeAgent::SearchAssistant => "What should I search?".to_string(),
-            MaeAgent::ResearchScholar => "Let's study!".to_string(),
         }
     }
 }
