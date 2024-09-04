@@ -429,7 +429,7 @@ impl Widget for ChatPanel {
         if self.focus_on_prompt_input_pending {
             self.focus_on_prompt_input_pending = false;
 
-            self.prompt_input(id!(main_prompt_input)).reset_text(cx, true);
+            self.prompt_input(id!(main_prompt_input)).reset_text(true);
         }
 
         let message_list_uid = self.portal_list(id!(chat)).widget_uid();
@@ -600,13 +600,21 @@ impl ChatPanel {
                 receiving_response: true,
                 ..
             } => {
-                self.activate_prompt_input(cx, PromptInputMode::Disabled, PromptInputButton::EnabledStop);
+                self.activate_prompt_input(
+                    cx,
+                    PromptInputMode::Disabled,
+                    PromptInputButton::EnabledStop,
+                );
             }
             State::ModelSelectedWithChat {
                 was_cancelled: true,
                 ..
             } => {
-                self.activate_prompt_input(cx, PromptInputMode::Disabled, PromptInputButton::DisabledStop);
+                self.activate_prompt_input(
+                    cx,
+                    PromptInputMode::Disabled,
+                    PromptInputButton::DisabledStop,
+                );
             }
             _ => {
                 // Input prompts should not be visible in other conditions
@@ -724,7 +732,13 @@ impl ChatPanel {
         }
     }
 
-    fn send_message(&mut self, cx: &mut Cx, store: &mut Store, prompt: String, regenerate_from: Option<usize>) {
+    fn send_message(
+        &mut self,
+        cx: &mut Cx,
+        store: &mut Store,
+        prompt: String,
+        regenerate_from: Option<usize>,
+    ) {
         // Check if we have any text to send
         if prompt.trim().is_empty() {
             return;
@@ -752,7 +766,7 @@ impl ChatPanel {
                 store.send_chat_message(prompt.clone(), regenerate_from);
             }
 
-            self.prompt_input(id!(main_prompt_input)).reset_text(cx, false);
+            self.prompt_input(id!(main_prompt_input)).reset_text(false);
 
             // Scroll to the bottom when the message is sent
             self.scroll_messages_to_bottom(cx);
@@ -772,8 +786,12 @@ impl ChatPanel {
                 match chat_entity {
                     Some(ChatEntity::Agent(agent)) => {
                         let empty_view = self.view(id!(empty_conversation));
-                        empty_view.view(id!(avatar_section.model)).set_visible(false);
-                        empty_view.chat_agent_avatar(id!(avatar_section.agent)).set_visible(true);
+                        empty_view
+                            .view(id!(avatar_section.model))
+                            .set_visible(false);
+                        empty_view
+                            .chat_agent_avatar(id!(avatar_section.agent))
+                            .set_visible(true);
 
                         empty_view
                             .chat_agent_avatar(id!(avatar_section.agent))
@@ -782,7 +800,9 @@ impl ChatPanel {
                     _ => {
                         let empty_view = self.view(id!(empty_conversation));
                         empty_view.view(id!(avatar_section.model)).set_visible(true);
-                        empty_view.chat_agent_avatar(id!(avatar_section.agent)).set_visible(false);
+                        empty_view
+                            .chat_agent_avatar(id!(avatar_section.agent))
+                            .set_visible(false);
 
                         empty_view
                             .label(id!(avatar_label))
@@ -866,12 +886,12 @@ impl ChatPanel {
                             chat_line_item.set_model_avatar(&agent);
                         }
                         Some(ChatEntity::ModelFile(_)) => {
-                            chat_line_item
-                                .set_model_avatar_text(&get_model_initial_letter(store).unwrap().to_string());
+                            chat_line_item.set_model_avatar_text(
+                                &get_model_initial_letter(store).unwrap().to_string(),
+                            );
                         }
                         _ => {}
                     }
-
                 } else {
                     item = list.item(cx, item_id, live_id!(UserChatLine)).unwrap();
                     chat_line_item = item.as_chat_line();
