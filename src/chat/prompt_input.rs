@@ -239,12 +239,23 @@ pub struct PromptInput {
     agents_keyboard_focus_index: usize,
 
     #[rust]
+    agents_search_pending_focus: bool,
+
+    #[rust]
     pub agent_selected: Option<MaeAgent>,
 }
 
 impl Widget for PromptInput {
     fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, walk: Walk) -> DrawStep {
-        self.deref.draw_walk(cx, scope, walk)
+        while !self.deref.draw_walk(cx, scope, walk).is_done() {}
+        if self.agents_search_pending_focus {
+            self.agents_search_pending_focus = false;
+
+            let agent_search_input = self.text_input(id!(agent_search_input));
+            agent_search_input.set_cursor(0, 0);
+            agent_search_input.set_key_focus(cx);
+        }
+        DrawStep::done()
     }
 
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
@@ -399,8 +410,8 @@ impl PromptInput {
 
     fn show_agent_autocomplete(&mut self, cx: &mut Cx) {
         self.view(id!(agent_autocomplete)).set_visible(true);
+        self.agents_search_pending_focus = true;
         self.compute_agent_list(cx);
-        self.text_input(id!(agent_search_input)).set_key_focus(cx);
     }
 
     fn hide_agent_autocomplete(&mut self) {
