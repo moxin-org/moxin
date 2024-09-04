@@ -258,7 +258,7 @@ impl Widget for PromptInput {
             self.agents_search_pending_focus = false;
 
             let agent_search_input = self.text_input(id!(agent_search_input));
-            agent_search_input.set_cursor(0, 0);
+            set_cursor_to_end(&agent_search_input);
             agent_search_input.set_key_focus(cx);
         }
 
@@ -266,7 +266,7 @@ impl Widget for PromptInput {
             self.prompt_pending_focus = false;
 
             let prompt = self.text_input(id!(prompt));
-            prompt.set_cursor(0, 0);
+            set_cursor_to_end(&prompt);
             prompt.set_key_focus(cx);
         }
 
@@ -345,7 +345,7 @@ impl WidgetMatchEvent for PromptInput {
 
 impl PromptInput {
     fn on_prompt_changed(&mut self, cx: &mut Cx, current: String) {
-        if was_at_added(&self.prev_prompt, &current) {
+        if self.was_at_added() {
             self.show_agent_autocomplete(cx);
         } else {
             self.hide_agent_autocomplete();
@@ -355,13 +355,13 @@ impl PromptInput {
     }
 
     fn on_escape(&mut self) {
-        let agent_autocomplete = self.view(id!(agent_autocomplete));
-        agent_autocomplete.set_visible(false);
+        self.hide_agent_autocomplete();
+        self.prompt_pending_focus = true;
     }
 
     fn on_agent_selected(&mut self, agent: &MaeAgent) {
         self.agent_selected = Some(*agent);
-        self.view(id!(agent_autocomplete)).set_visible(false);
+        self.hide_agent_autocomplete();
         self.view(id!(selected_agent_bubble)).set_visible(true);
 
         self.chat_agent_avatar(id!(agent_avatar)).set_agent(agent);
@@ -448,12 +448,33 @@ impl PromptInput {
 
         self.compute_agent_list(cx);
     }
+
+    fn was_at_added(&mut self) -> bool {
+        let prompt = self.text_input(id!(prompt));
+        let prev = &self.prev_prompt;
+        let current = &prompt.text();
+
+        if current.len() != prev.len() + 1 {
+            return false;
+        }
+
+        // not necessarily the cursor head, but works for this single character use case
+        let cursor_pos = prompt.borrow().map_or(0, |p| p.sorted_cursor().0);
+
+        if cursor_pos == 0 {
+            return false;
+        }
+
+        let inserted_char = current.chars().nth(cursor_pos - 1).unwrap_or_default();
+
+        inserted_char == '@'
+    }
 }
 
 impl LiveHook for PromptInput {}
 
 impl PromptInputRef {
-    pub fn reset_text(&mut self, cx: &mut Cx, set_key_focus: bool) {
+    pub fn reset_text(&mut self, set_key_focus: bool) {
         let Some(mut inner) = self.borrow_mut() else {
             return;
         };
@@ -465,21 +486,8 @@ impl PromptInputRef {
         inner.hide_agent_autocomplete();
         inner.prev_prompt.clear();
 
-        if set_key_focus {
-            prompt_input.set_key_focus(cx);
-        }
+        inner.prompt_pending_focus = set_key_focus;
     }
-}
-
-// workaround to detect if '@' was added to the prompt
-// this doesn't take into account mouse cursor position so it can give false positives
-// when copy-pasting text.
-fn was_at_added(prev: &str, current: &str) -> bool {
-    let char_added = current.len() == prev.len() + 1;
-    let at_added = current.chars().filter(|c| *c == '@').count()
-        == prev.chars().filter(|c| *c == '@').count() + 1;
-
-    char_added && at_added
 }
 
 fn filter_agents<'a, A: Iterator<Item = &'a MaeAgent>>(
@@ -496,4 +504,9 @@ fn filter_agents<'a, A: Iterator<Item = &'a MaeAgent>>(
             .iter()
             .all(|term| agent.name().to_ascii_lowercase().contains(term))
     })
+}
+
+fn set_cursor_to_end(text_input: &TextInputRef) {
+    let len = text_input.text().chars().count();
+    text_input.set_cursor(len, len);
 }
