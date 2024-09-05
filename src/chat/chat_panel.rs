@@ -470,7 +470,13 @@ impl WidgetMatchEvent for ChatPanel {
                     self.focus_on_prompt_input_pending = true;
                     self.redraw(cx)
                 }
-                ModelSelectorAction::AgentSelected(_) => {
+                ModelSelectorAction::AgentSelected(agent) => {
+                    if let Some(chat) = store.chats.get_current_chat() {
+                        chat.borrow_mut().last_used_entity =
+                            Some(ChatEntity::Agent(agent));
+                        chat.borrow().save();
+                    }
+
                     self.focus_on_prompt_input_pending = true;
                     self.redraw(cx);
                 }
