@@ -297,32 +297,39 @@ impl Widget for PromptInput {
 
 impl WidgetMatchEvent for PromptInput {
     fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, _scope: &mut Scope) {
-        if let Some(current) = self.text_input(id!(prompt)).changed(actions) {
-            self.on_prompt_changed(cx, current);
-        }
-
+        let prompt = self.text_input(id!(prompt));
         let agent_search_input = self.text_input(id!(agent_search_input));
 
-        actions
-            .iter()
-            .filter_map(|a| a.as_widget_action())
-            .filter(|a| a.widget_uid == agent_search_input.widget_uid())
-            .for_each(|a| match a.cast::<TextInputAction>() {
-                TextInputAction::Change(current) => {
-                    self.on_agent_search_changed(cx, current.clone());
+        for action in actions.iter().filter_map(|a| a.as_widget_action()) {
+            if action.widget_uid == prompt.widget_uid() {
+                match action.cast::<TextInputAction>() {
+                    TextInputAction::Change(current) => {
+                        self.on_prompt_changed(cx, current);
+                    }
+                    TextInputAction::Escape => self.on_agent_deselected(),
+                    _ => {}
                 }
-                TextInputAction::Return(current) => {
-                    self.on_agent_search_submit(current);
+            }
+
+            if action.widget_uid == agent_search_input.widget_uid() {
+                match action.cast::<TextInputAction>() {
+                    TextInputAction::Change(current) => {
+                        self.on_agent_search_changed(cx, current.clone());
+                    }
+                    TextInputAction::Return(current) => {
+                        self.on_agent_search_submit(current);
+                    }
+                    TextInputAction::Escape => {
+                        self.hide_agent_autocomplete();
+                        self.prompt_pending_focus = true;
+                    }
+                    TextInputAction::KeyFocusLost => {
+                        self.hide_agent_autocomplete();
+                    }
+                    _ => {}
                 }
-                TextInputAction::Escape => {
-                    self.hide_agent_autocomplete();
-                    self.prompt_pending_focus = true;
-                }
-                TextInputAction::KeyFocusLost => {
-                    self.hide_agent_autocomplete();
-                }
-                _ => {}
-            });
+            }
+        }
 
         if self.button(id!(agent_deselect_button)).clicked(actions) {
             self.on_agent_deselected();
