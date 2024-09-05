@@ -103,6 +103,9 @@ pub struct AgentButton {
 
     #[live(false)]
     create_new_chat: bool,
+
+    #[live(false)]
+    select_agent_on_prompt: bool,
 }
 
 impl Widget for AgentButton {
@@ -135,6 +138,10 @@ impl WidgetMatchEvent for AgentButton {
                             &scope.path,
                             ChatHistoryCardAction::ChatSelected,
                         );
+                    }
+
+                    if self.select_agent_on_prompt {
+                        cx.action(PromptInputAction::AgentSelected(agent));
                     }
                 }
             }
