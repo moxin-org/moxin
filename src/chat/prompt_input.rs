@@ -276,12 +276,6 @@ impl Widget for PromptInput {
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
         self.deref.handle_event(cx, event, scope);
 
-        if let Event::KeyUp(key_event) = event {
-            if key_event.key_code == KeyCode::Escape {
-                self.on_escape();
-            }
-        }
-
         // TODO: This should actually be "when the agent search input is focused"
         if self.view(id!(agent_autocomplete)).visible() {
             if let Event::KeyDown(key_event) = event {
@@ -309,13 +303,26 @@ impl WidgetMatchEvent for PromptInput {
 
         let agent_search_input = self.text_input(id!(agent_search_input));
 
-        if let Some(current) = agent_search_input.changed(actions) {
-            self.on_agent_search_changed(cx, current);
-        }
-
-        if let Some(current) = agent_search_input.returned(actions) {
-            self.on_agent_search_submit(current);
-        }
+        actions
+            .iter()
+            .filter_map(|a| a.as_widget_action())
+            .filter(|a| a.widget_uid == agent_search_input.widget_uid())
+            .for_each(|a| match a.cast::<TextInputAction>() {
+                TextInputAction::Change(current) => {
+                    self.on_agent_search_changed(cx, current.clone());
+                }
+                TextInputAction::Return(current) => {
+                    self.on_agent_search_submit(current);
+                }
+                TextInputAction::Escape => {
+                    self.hide_agent_autocomplete();
+                    self.prompt_pending_focus = true;
+                }
+                TextInputAction::KeyFocusLost => {
+                    self.hide_agent_autocomplete();
+                }
+                _ => {}
+            });
 
         if self.button(id!(agent_deselect_button)).clicked(actions) {
             self.on_agent_deselected();
@@ -352,11 +359,6 @@ impl PromptInput {
         }
 
         self.prev_prompt = current;
-    }
-
-    fn on_escape(&mut self) {
-        self.hide_agent_autocomplete();
-        self.prompt_pending_focus = true;
     }
 
     fn on_agent_selected(&mut self, agent: &MaeAgent) {
