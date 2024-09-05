@@ -376,7 +376,24 @@ impl PromptInput {
         self.label(id!(selected_agent_label))
             .set_text(&agent.name());
 
-        // TODO: Remove the inserted @
+        let prompt = self.text_input(id!(prompt));
+        let prompt_cursor_pos = prompt.borrow().map_or(0, |p| p.sorted_cursor().0);
+        if prompt_cursor_pos > 0 {
+            let last_char_pos = prompt_cursor_pos - 1;
+            let last_char = prompt.text().chars().nth(last_char_pos).unwrap_or_default();
+
+            if last_char == '@' {
+                let at_removed = prompt
+                    .text()
+                    .chars()
+                    .enumerate()
+                    .filter_map(|(i, c)| if i == last_char_pos { None } else { Some(c) })
+                    .collect::<String>();
+
+                prompt.set_text(&at_removed);
+                self.prev_prompt = at_removed;
+            }
+        }
 
         self.prompt_pending_focus = true;
     }
