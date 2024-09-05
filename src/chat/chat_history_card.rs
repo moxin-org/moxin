@@ -336,7 +336,7 @@ impl Widget for ChatHistoryCard {
             .to_uppercase()
             .to_string();
 
-        match chat.borrow().last_used_entity {
+        match chat.borrow().associated_entity {
             Some(ChatEntity::Agent(agent)) => {
                 self.view(id!(avatar_section.model)).set_visible(false);
                 self.chat_agent_avatar(id!(avatar_section.agent)).set_visible(true);

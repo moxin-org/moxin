@@ -462,7 +462,7 @@ impl WidgetMatchEvent for ChatPanel {
                     store.load_model(&downloaded_file.file);
 
                     if let Some(chat) = store.chats.get_current_chat() {
-                        chat.borrow_mut().last_used_entity =
+                        chat.borrow_mut().associated_entity =
                             Some(ChatEntity::ModelFile(downloaded_file.file.id.clone()));
                         chat.borrow().save();
                     }
@@ -472,7 +472,7 @@ impl WidgetMatchEvent for ChatPanel {
                 }
                 ModelSelectorAction::AgentSelected(agent) => {
                     if let Some(chat) = store.chats.get_current_chat() {
-                        chat.borrow_mut().last_used_entity =
+                        chat.borrow_mut().associated_entity =
                             Some(ChatEntity::Agent(agent));
                         chat.borrow().save();
                     }
@@ -801,7 +801,7 @@ impl ChatPanel {
             State::ModelSelectedWithEmptyChat { .. } => {
                 let store = scope.data.get::<Store>().unwrap();
 
-                let chat_entity = &get_chat(store).unwrap().borrow().last_used_entity;
+                let chat_entity = &get_chat(store).unwrap().borrow().associated_entity;
                 match chat_entity {
                     Some(ChatEntity::Agent(agent)) => {
                         let empty_view = self.view(id!(empty_conversation));
