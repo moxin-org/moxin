@@ -13,21 +13,8 @@ live_design! {
     import crate::shared::styles::*;
     import crate::shared::widgets::*;
     import crate::chat::model_info::ModelInfo;
+    import crate::chat::model_info::AgentInfo;
     import crate::chat::model_selector_item::ModelSelectorItem;
-
-    AgentInfo = <View> {
-        width: Fill,
-        height: Fit,
-        padding: 16,
-
-        cursor: Hand,
-        label = <Label> {
-            draw_text:{
-                text_style: <REGULAR_FONT>{font_size: 11},
-                color: #000
-            }
-        }
-    }
 
     ModelSelectorList = {{ModelSelectorList}} {
         flow: Down,

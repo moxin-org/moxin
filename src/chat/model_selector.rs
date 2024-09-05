@@ -20,6 +20,7 @@ live_design! {
     import crate::shared::styles::*;
 
     import crate::chat::model_info::ModelInfo;
+    import crate::chat::model_info::AgentInfo;
     import crate::chat::model_selector_list::ModelSelectorList;
     import crate::chat::model_selector_loading::ModelSelectorLoading;
 
@@ -74,7 +75,22 @@ live_design! {
                     }
                 }
 
-                selected = <ModelInfo> {
+                selected_model = <ModelInfo> {
+                    width: Fit,
+                    height: Fit,
+                    show_bg: false,
+                    visible: false,
+
+                    padding: 0,
+
+                    label = {
+                        draw_text: {
+                            text_style: <BOLD_FONT>{font_size: 11},
+                        }
+                    }
+                }
+
+                selected_agent = <AgentInfo> {
                     width: Fit,
                     height: Fit,
                     show_bg: false,
@@ -391,13 +407,29 @@ impl ModelSelector {
             .get_current_chat()
             .and_then(|c| c.borrow().last_used_entity.clone());
 
+        if let Some(ChatEntity::Agent(agent)) = chat_entity {
+            self.view(id!(selected_model)).set_visible(false);
+            let selected_view = self.view(id!(selected_agent));
+            selected_view.set_visible(true);
+
+            selected_view.apply_over(
+                cx,
+                live! {
+                    label = { text: (agent.name()) }
+                },
+            );
+
+            return;
+        } 
+
         let file = match chat_entity {
             Some(ChatEntity::ModelFile(file_id)) => store.downloads.get_file(&file_id).cloned(),
             _ => loaded_file.cloned(),
         };
 
         if let Some(file) = file {
-            let selected_view = self.view(id!(selected));
+            self.view(id!(selected_agent)).set_visible(false);
+            let selected_view = self.view(id!(selected_model));
             selected_view.set_visible(true);
 
             let text_color = if Some(&file.id) == loaded_file.map(|f| &f.id) {

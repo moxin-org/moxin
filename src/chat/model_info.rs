@@ -77,5 +77,19 @@ live_design! {
             }
         }
     }
+
+    AgentInfo = <View> {
+        width: Fill,
+        height: Fit,
+        padding: 16,
+
+        cursor: Hand,
+        label = <Label> {
+            draw_text:{
+                text_style: <REGULAR_FONT>{font_size: 11},
+                color: #000
+            }
+        }
+    }
 }
 
