@@ -4,7 +4,7 @@ use moxin_mae::{MaeAgent, MaeBackend};
 use crate::shared::{actions::ChatAction, computed_list::ComputedListWidgetExt};
 
 use super::{
-    agent_button::AgentButtonWidgetRefExt, model_selector_list::ModelSelectorAction,
+    agent_button::AgentButtonWidgetRefExt, model_selector_item::ModelSelectorAction,
     shared::ChatAgentAvatarWidgetExt,
 };
 
@@ -330,8 +330,10 @@ impl WidgetMatchEvent for PromptInput {
                 }
             }
 
-            if let ModelSelectorAction::Selected(_) = action.cast() {
-                self.on_agent_deselected();
+            match action.cast() {
+                ModelSelectorAction::ModelSelected(_) => self.on_agent_deselected(),
+                ModelSelectorAction::AgentSelected(agent) => self.on_agent_selected(&agent),
+                _ => ()
             }
 
             if let ChatAction::Start(_) = action.cast() {

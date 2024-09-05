@@ -8,7 +8,6 @@ live_design! {
 
     ICON_TICK = dep("crate://self/resources/images/tick.png")
 
-
     ModelAttributeTag = <RoundedView> {
         width: Fit,
         height: Fit,
@@ -28,23 +27,13 @@ live_design! {
     }
 
     ModelInfo = <View> {
-        width: Fill,
-        height: Fit,
         padding: 16,
         spacing: 10,
+        width: Fill,
+        height: Fit,
         align: {x: 0.0, y: 0.5},
 
-        show_bg: true,
-        draw_bg: {
-            instance hover: 0.0,
-            instance down: 0.0,
-            color: #fff,
-            instance color_hover: #F9FAFB,
-
-            fn pixel(self) -> vec4 {
-                return mix(self.color, self.color_hover, self.hover);
-            }
-        }
+        cursor: Hand,
 
         label = <Label> {
             draw_text:{
