@@ -59,7 +59,7 @@ live_design! {
             height: Fit,
             show_bg: true,
 
-            button = <AgentButton> {}
+            button = <AgentButton> { select_agent_on_prompt: true }
         }
 
         <View> {
