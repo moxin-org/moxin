@@ -329,6 +329,14 @@ impl WidgetMatchEvent for PromptInput {
                     _ => {}
                 }
             }
+
+            if let ModelSelectorAction::Selected(_) = action.cast() {
+                self.on_agent_deselected();
+            }
+
+            if let ChatAction::Start(_) = action.cast() {
+                self.on_agent_deselected();
+            }
         }
 
         if self.button(id!(agent_deselect_button)).clicked(actions) {
@@ -342,16 +350,6 @@ impl WidgetMatchEvent for PromptInput {
             match action {
                 PromptInputAction::AgentSelected(agent) => self.on_agent_selected(agent),
                 PromptInputAction::None => {}
-            }
-        }
-
-        for action in actions.iter() {
-            if let ModelSelectorAction::Selected(_) = action.as_widget_action().cast() {
-                self.on_agent_deselected();
-            }
-
-            if let ChatAction::Start(_) = action.as_widget_action().cast() {
-                self.on_agent_deselected();
             }
         }
     }
