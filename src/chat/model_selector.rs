@@ -8,7 +8,8 @@ use crate::{
 use makepad_widgets::*;
 
 use super::{
-    model_selector_list::{ModelSelectorAction, ModelSelectorListWidgetExt},
+    model_selector_item::ModelSelectorAction,
+    model_selector_list::ModelSelectorListWidgetExt,
     model_selector_loading::ModelSelectorLoadingWidgetExt,
 };
 
@@ -118,7 +119,7 @@ live_design! {
         draw_bg: {
             instance radius: 3.0,
             color: #fff,
-            border_color: #B6B6B6,
+            border_color: #D0D5DD,
             border_width: 1.0,
         }
 
@@ -343,8 +344,8 @@ impl WidgetMatchEvent for ModelSelector {
         }
 
         for action in actions {
-            match action.as_widget_action().cast() {
-                ModelSelectorAction::Selected(_) => {
+            match action.cast() {
+                ModelSelectorAction::ModelSelected(_) | ModelSelectorAction::AgentSelected(_) => {
                     self.hide_options(cx);
                 }
                 _ => {}

@@ -6,7 +6,7 @@ use crate::{
     chat::{
         chat_line::{ChatLineAction, ChatLineWidgetRefExt},
         model_selector::ModelSelectorWidgetExt,
-        model_selector_list::ModelSelectorAction,
+        model_selector_item::ModelSelectorAction,
     },
     data::{
         chats::chat::{Chat, ChatEntity, ChatMessage},
@@ -452,6 +452,28 @@ impl WidgetMatchEvent for ChatPanel {
         let widget_uid = self.widget_uid();
         let store = scope.data.get_mut::<Store>().unwrap();
 
+        for action in actions {
+            match action.cast() {
+                ModelSelectorAction::ModelSelected(downloaded_file) => {
+                    store.load_model(&downloaded_file.file);
+
+                    if let Some(chat) = store.chats.get_current_chat() {
+                        chat.borrow_mut().last_used_entity =
+                            Some(ChatEntity::ModelFile(downloaded_file.file.id.clone()));
+                        chat.borrow().save();
+                    }
+    
+                    self.focus_on_prompt_input_pending = true;
+                    self.redraw(cx)
+                }
+                ModelSelectorAction::AgentSelected(_) => {
+                    self.focus_on_prompt_input_pending = true;
+                    self.redraw(cx);
+                }
+                _ => {}
+            }
+        }
+
         for action in actions
             .iter()
             .filter_map(|action| action.as_widget_action())
@@ -460,19 +482,6 @@ impl WidgetMatchEvent for ChatPanel {
                 self.reset_scroll_messages(&store);
                 self.focus_on_prompt_input_pending = true;
                 self.redraw(cx);
-            }
-
-            if let ModelSelectorAction::Selected(downloaded_file) = action.cast() {
-                store.load_model(&downloaded_file.file);
-
-                if let Some(chat) = store.chats.get_current_chat() {
-                    chat.borrow_mut().last_used_entity =
-                        Some(ChatEntity::ModelFile(downloaded_file.file.id.clone()));
-                    chat.borrow().save();
-                }
-
-                self.focus_on_prompt_input_pending = true;
-                self.redraw(cx)
             }
 
             match action.cast() {

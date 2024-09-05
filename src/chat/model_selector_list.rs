@@ -1,83 +1,40 @@
 use crate::{data::store::Store, shared::utils::format_model_size};
 use makepad_widgets::*;
+use moxin_mae::{MaeAgent, MaeBackend};
 use moxin_protocol::data::DownloadedFile;
 use std::collections::HashMap;
+
+use super::model_selector_item::ModelSelectorItemWidgetRefExt;
 
 live_design! {
     import makepad_widgets::base::*;
     import makepad_widgets::theme_desktop_dark::*;
 
     import crate::shared::styles::*;
-
+    import crate::shared::widgets::*;
     import crate::chat::model_info::ModelInfo;
+    import crate::chat::model_selector_item::ModelSelectorItem;
 
-    ModelSelectorList = {{ModelSelectorList}} {
-        flow: Down,
-        template: <ModelInfo> {
-            // This is mandatory to listen for touch/click events
-            cursor: Hand,
+    AgentInfo = <View> {
+        width: Fill,
+        height: Fit,
+        padding: 16,
 
-            animator: {
-                hover = {
-                    default: off
-                    off = {
-                        from: {all: Forward {duration: 0.2}}
-                        apply: {
-                            draw_bg: {hover: 0.0}
-                        }
-                    }
-
-                    on = {
-                        from: {all: Snap}
-                        apply: {
-                            draw_bg: {hover: 1.0}
-                        },
-                    }
-                }
-                down = {
-                    default: off
-                    off = {
-                        from: {all: Forward {duration: 0.5}}
-                        ease: OutExp
-                        apply: {
-                            draw_bg: {down: 0.0}
-                        }
-                    }
-                    on = {
-                        ease: OutExp
-                        from: {
-                            all: Forward {duration: 0.2}
-                        }
-                        apply: {
-                            draw_bg: {down: 1.0}
-                        }
-                    }
-                }
-            }
-        }
-
-        no_models_message: <View> {
-            width: Fill,
-            height: Fit,
-            padding: 14,
-            spacing: 5,
-            align: {x: 0.5, y: 0.5},
-
-            <Label> {
-                draw_text:{
-                    text_style: <REGULAR_FONT>{font_size: 11},
-                    color: #000
-                }
-                text: "No models available. Download a model to get started."
+        cursor: Hand,
+        label = <Label> {
+            draw_text:{
+                text_style: <REGULAR_FONT>{font_size: 11},
+                color: #000
             }
         }
     }
-}
 
-#[derive(Clone, DefaultNone, Debug)]
-pub enum ModelSelectorAction {
-    Selected(DownloadedFile),
-    None,
+    ModelSelectorList = {{ModelSelectorList}} {
+        flow: Down,
+        model_template: <ModelSelectorItem> { content = <ModelInfo> {} }
+        agent_template: <ModelSelectorItem> { content = <AgentInfo> {} }
+        separator_template: <Line> {}
+    }
 }
 
 #[derive(Live, LiveHook, Widget)]
@@ -93,9 +50,11 @@ pub struct ModelSelectorList {
     layout: Layout,
 
     #[live]
-    template: Option<LivePtr>,
+    model_template: Option<LivePtr>,
     #[live]
-    no_models_message: Option<LivePtr>,
+    agent_template: Option<LivePtr>,
+    #[live]
+    separator_template: Option<LivePtr>,
 
     #[live(true)]
     visible: bool,
@@ -112,21 +71,22 @@ pub struct ModelSelectorList {
 
 impl Widget for ModelSelectorList {
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
-        let widget_uid = self.widget_uid();
-        for (id, item) in self.items.iter_mut() {
-            let actions = cx.capture_actions(|cx| item.handle_event(cx, event, scope));
-            if let Some(fd) = item.as_view().finger_down(&actions) {
-                if fd.tap_count == 1 {
-                    cx.widget_action(
-                        widget_uid,
-                        &scope.path,
-                        ModelSelectorAction::Selected(
-                            self.map_to_downloaded_files.get(id).unwrap().clone(),
-                        ),
-                    );
-                }
-            }
+        for (_, item) in self.items.iter_mut() {
+            item.handle_event(cx, event, scope)
         }
+        //     let actions = cx.capture_actions(|cx| item.handle_event(cx, event, scope));
+        //     if let Some(fd) = item.as_view().finger_down(&actions) {
+        //         if fd.tap_count == 1 {
+        //             cx.widget_action(
+        //                 widget_uid,
+        //                 &scope.path,
+        //                 ModelSelectorAction::Selected(
+        //                     self.map_to_downloaded_files.get(id).unwrap().clone(),
+        //                 ),
+        //             );
+        //         }
+        //     }
+        // }
     }
 
     fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, walk: Walk) -> DrawStep {
@@ -145,35 +105,29 @@ impl Widget for ModelSelectorList {
 
 impl ModelSelectorList {
     fn draw_items(&mut self, cx: &mut Cx2d, store: &Store) {
-
-        let mut items = store.downloads.downloaded_files.clone();
-        items.sort_by(|a, b| b.downloaded_at.cmp(&a.downloaded_at));
-
-        if items.is_empty() {
-            let item_widget = WidgetRef::new_from_ptr(cx, self.no_models_message);
-            let _ = item_widget.draw_all(cx, &mut Scope::empty());
-            return;
-        }
+        let mut models = store.downloads.downloaded_files.clone();
+        models.sort_by(|a, b| b.downloaded_at.cmp(&a.downloaded_at));
 
         self.map_to_downloaded_files = HashMap::new();
         let mut total_height = 0.0;
-        for i in 0..items.len() {
+        let models_count = models.len();
+        for i in 0..models.len() {
             let item_id = LiveId(i as u64).into();
             let item_widget = self
                 .items
-                .get_or_insert(cx, item_id, |cx| WidgetRef::new_from_ptr(cx, self.template));
+                .get_or_insert(cx, item_id, |cx| WidgetRef::new_from_ptr(cx, self.model_template));
             self.map_to_downloaded_files
-                .insert(item_id, items[i].clone());
+                .insert(item_id, models[i].clone());
 
-            let caption = &items[i].file.name;
+            let caption = &models[i].file.name;
 
-            let architecture = &items[i].model.architecture;
+            let architecture = &models[i].model.architecture;
             let architecture_visible = !architecture.trim().is_empty();
 
-            let param_size = &items[i].model.size;
+            let param_size = &models[i].model.size;
             let param_size_visible = !param_size.trim().is_empty();
 
-            let size = format_model_size(&items[i].file.size).unwrap_or("".to_string());
+            let size = format_model_size(&models[i].file.size).unwrap_or("".to_string());
             let size_visible = !size.trim().is_empty();
 
             let mut icon_tick_visible = false;
@@ -184,18 +138,52 @@ impl ModelSelectorList {
             item_widget.apply_over(
                 cx,
                 live! {
-                    label = { text: (caption) }
-                    architecture_tag = { visible: (architecture_visible), caption = { text: (architecture) } }
-                    params_size_tag = { visible: (param_size_visible), caption = { text: (param_size) } }
-                    file_size_tag = { visible: (size_visible), caption = { text: (size) } }
-                    icon_tick_tag = { visible: (icon_tick_visible) }
+                    content = {
+                        label = { text: (caption) }
+                        architecture_tag = { visible: (architecture_visible), caption = { text: (architecture) } }
+                        params_size_tag = { visible: (param_size_visible), caption = { text: (param_size) } }
+                        file_size_tag = { visible: (size_visible), caption = { text: (size) } }
+                        icon_tick_tag = { visible: (icon_tick_visible) }
+                    }
                 },
             );
 
-            let _ = item_widget.draw_all(cx, &mut Scope::empty());
+            item_widget.as_model_selector_item().set_model(models[i].clone());
 
-            total_height += item_widget.as_view().area().rect(cx).size.y;
+            let _ = item_widget.draw_all(cx, &mut Scope::empty());
+            total_height += item_widget.view(id!(content)).area().rect(cx).size.y;
         }
+
+        if models_count > 0 {
+            let separator_id = LiveId(models_count as u64).into();
+            let separator_widget = self
+                .items
+                .get_or_insert(cx, separator_id, |cx| WidgetRef::new_from_ptr(cx, self.separator_template));
+            let _ = separator_widget.draw_all(cx, &mut Scope::empty());
+            total_height += separator_widget.as_view().area().rect(cx).size.y;
+        }
+
+        let agents = MaeBackend::available_agents();
+        for i in 0..agents.len() {
+            let item_id = LiveId((models_count + 1 + i) as u64).into();
+            let item_widget = self
+                .items
+                .get_or_insert(cx, item_id, |cx| WidgetRef::new_from_ptr(cx, self.agent_template));
+
+            let agent_name = &agents[i].name();
+            item_widget.apply_over(
+                cx,
+                live! {
+                    content = { label = { text: (agent_name) } }
+                },
+            );
+            item_widget.as_model_selector_item().set_agent(agents[i].clone());
+
+            let _ = item_widget.draw_all(cx, &mut Scope::empty());
+            total_height += item_widget.view(id!(content)).area().rect(cx).size.y;
+        }
+
+
         self.total_height = Some(total_height);
     }
 }

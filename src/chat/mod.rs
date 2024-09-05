@@ -10,6 +10,7 @@ pub mod chat_screen;
 pub mod delete_chat_modal;
 pub mod model_info;
 pub mod model_selector;
+pub mod model_selector_item;
 pub mod model_selector_list;
 pub mod model_selector_loading;
 pub mod prompt_input;
@@ -29,6 +30,7 @@ pub fn live_design(cx: &mut Cx) {
     chat_screen::live_design(cx);
     model_info::live_design(cx);
     model_selector_list::live_design(cx);
+    model_selector_item::live_design(cx);
     model_selector::live_design(cx);
     model_selector_loading::live_design(cx);
     shared::live_design(cx);
