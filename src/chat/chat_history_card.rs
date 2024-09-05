@@ -76,11 +76,11 @@ live_design! {
     ChatHistoryCard = {{ChatHistoryCard}} {
         flow: Overlay,
         width: Fill,
-        height: Fit,
+        height: 52,
 
         selected_bg = <RoundedView> {
             width: Fill
-            height: 52
+            height: Fill
             padding: {left: 4, right: 4}
 
             show_bg: true
@@ -122,6 +122,7 @@ live_design! {
                 width: Fill
                 height: Fit
                 flow: Down
+                align: {y: 0.5}
                 spacing: 2
                 padding: { left: 8, top: 10, bottom: 10 }
 
@@ -132,7 +133,6 @@ live_design! {
                         text_style: <BOLD_FONT>{font_size: 7.5},
                         color: #475467,
                     }
-                    text: "Search Assistant"
                 }
 
                 <View> {
@@ -217,7 +217,7 @@ live_design! {
                         }
                     }
                     on = {
-                        from: {all: Snap}
+                        from: {all: Forward {duration: 0.15}}
                         apply: {
                             draw_bg: {color: #EAECEF88}
                         }
@@ -241,6 +241,24 @@ live_design! {
                 delete_chat_modal_inner = <DeleteChatModal> {}
             }
         }
+
+        animator: {
+            edit = {
+                default: hide
+                show = {
+                    from: {all: Forward {duration: 0.15}}
+                    apply: {
+                        height: 108
+                    }
+                }
+                hide = {
+                    from: {all: Forward {duration: 0.15}}
+                    apply: {
+                        height: 52
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -260,11 +278,17 @@ pub struct ChatHistoryCard {
 
     #[rust]
     title_edition_state: TitleState,
+
+    #[animator]
+    animator: Animator,
 }
 
 impl Widget for ChatHistoryCard {
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
         self.view.handle_event(cx, event, scope);
+        if self.animator_handle_event(cx, event).must_redraw() {
+            self.redraw(cx);
+        }
         self.widget_match_event(cx, event, scope);
     }
 
@@ -418,6 +442,15 @@ impl ChatHistoryCard {
         };
 
         self.update_title_visibility(cx);
+
+        match self.title_edition_state {
+            TitleState::OnEdit => {
+                self.animator_play(cx, id!(edit.show));
+            }
+            TitleState::Editable => {
+                self.animator_play(cx, id!(edit.hide));
+            }
+        }
     }
 
     pub fn handle_title_editable_actions(
