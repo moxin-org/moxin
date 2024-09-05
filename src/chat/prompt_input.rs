@@ -276,7 +276,7 @@ impl Widget for PromptInput {
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
         self.deref.handle_event(cx, event, scope);
 
-        // TODO: This should actually be "when the agent search input is focused"
+        // since we are hiding this on blur, checking visibility is enough to know if it is focused
         if self.view(id!(agent_autocomplete)).visible() {
             if let Event::KeyDown(key_event) = event {
                 let delta = match key_event.key_code {
