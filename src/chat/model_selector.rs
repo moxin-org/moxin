@@ -405,7 +405,7 @@ impl ModelSelector {
         let chat_entity = store
             .chats
             .get_current_chat()
-            .and_then(|c| c.borrow().last_used_entity.clone());
+            .and_then(|c| c.borrow().associated_entity.clone());
 
         if let Some(ChatEntity::Agent(agent)) = chat_entity {
             self.view(id!(selected_model)).set_visible(false);

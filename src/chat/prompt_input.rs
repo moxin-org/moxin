@@ -331,9 +331,10 @@ impl WidgetMatchEvent for PromptInput {
             }
 
             match action.cast() {
-                ModelSelectorAction::ModelSelected(_) => self.on_agent_deselected(),
-                ModelSelectorAction::AgentSelected(agent) => self.on_agent_selected(&agent),
-                _ => ()
+                ModelSelectorAction::ModelSelected(_) | ModelSelectorAction::AgentSelected(_) => {
+                    self.on_agent_deselected()
+                }
+                _ => (),
             }
 
             if let ChatAction::Start(_) = action.cast() {

@@ -66,8 +66,8 @@ impl Chats {
         if let Some(mut chat) = self.get_current_chat().map(|c| c.borrow_mut()) {
             let new_file_id = Some(ChatEntity::ModelFile(file.id.clone()));
 
-            if chat.last_used_entity != new_file_id {
-                chat.last_used_entity = new_file_id;
+            if chat.associated_entity != new_file_id {
+                chat.associated_entity = new_file_id;
                 chat.save();
             }
         }
@@ -110,7 +110,7 @@ impl Chats {
     pub fn cancel_chat_streaming(&mut self) {
         if let Some(chat) = self.get_current_chat() {
             let mut chat = chat.borrow_mut();
-            match chat.last_used_entity {
+            match chat.associated_entity {
                 Some(ChatEntity::ModelFile(_)) => {
                     chat.cancel_streaming(self.backend.as_ref());
                 }
@@ -150,7 +150,7 @@ impl Chats {
     /// The fallback is used if the chat does not have a file id set, or, if it has
     /// one but references a no longer existing (deleted) file.
     pub fn get_chat_file_id(&self, chat: &mut Chat) -> Option<FileID> {
-        match &chat.last_used_entity {
+        match &chat.associated_entity {
             Some(ChatEntity::ModelFile(file_id)) => {
                 Some(file_id.clone())
             }
@@ -173,14 +173,14 @@ impl Chats {
     pub fn create_empty_chat_with_agent(&mut self, agent: MaeAgent) {
         self.create_empty_chat();
         if let Some(mut chat) = self.get_current_chat().map(|c| c.borrow_mut()) {
-            chat.last_used_entity = Some(ChatEntity::Agent(agent));
+            chat.associated_entity = Some(ChatEntity::Agent(agent));
             chat.save();
         }
     }
 
     pub fn create_empty_chat_and_load_file(&mut self, file: &File) {
         let mut new_chat = Chat::new(self.chats_dir.clone());
-        new_chat.last_used_entity = Some(ChatEntity::ModelFile(file.id.clone()));
+        new_chat.associated_entity = Some(ChatEntity::ModelFile(file.id.clone()));
         new_chat.save();
 
         self.current_chat_id = Some(new_chat.id);

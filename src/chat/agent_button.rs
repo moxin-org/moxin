@@ -136,8 +136,6 @@ impl WidgetMatchEvent for AgentButton {
                             ChatHistoryCardAction::ChatSelected,
                         );
                     }
-
-                    cx.action(PromptInputAction::AgentSelected(agent))
                 }
             }
         }

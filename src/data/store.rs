@@ -217,7 +217,7 @@ impl Store {
             return None;
         };
 
-        match chat.borrow().last_used_entity {
+        match chat.borrow().associated_entity {
             Some(ChatEntity::ModelFile(ref file_id)) => self
                 .downloads
                 .downloaded_files

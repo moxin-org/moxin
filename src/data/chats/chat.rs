@@ -55,7 +55,7 @@ enum TitleState {
 }
 
 #[derive(Debug, Default)]
-enum ChatState {
+pub enum ChatState {
     #[default]
     Idle,
     Receiving,
@@ -66,7 +66,7 @@ enum ChatState {
 #[derive(Serialize, Deserialize)]
 struct ChatData {
     id: ChatID,
-    last_used_entity: Option<ChatEntity>,
+    associated_entity: Option<ChatEntity>,
     system_prompt: Option<String>,
     messages: Vec<ChatMessage>,
     title: String,
@@ -108,7 +108,12 @@ impl Default for ChatInferenceParams {
 pub struct Chat {
     /// Unix timestamp in ms.
     pub id: ChatID,
-    pub last_used_entity: Option<ChatEntity>,
+
+    /// This is the model or agent that is currently "active" on the chat
+    /// For models it is the most recent model used or loaded in the context of this chat session.
+    /// For agents it is the agent that originated the chat.
+    pub associated_entity: Option<ChatEntity>,
+
     pub messages: Vec<ChatMessage>,
     pub messages_update_sender: Sender<ChatMessageAction>,
     pub messages_update_receiver: Receiver<ChatMessageAction>,
@@ -136,7 +141,7 @@ impl Chat {
             messages: vec![],
             messages_update_sender: tx,
             messages_update_receiver: rx,
-            last_used_entity: None,
+            associated_entity: None,
             state: ChatState::Idle,
             title_state: TitleState::default(),
             chats_dir,
@@ -155,14 +160,14 @@ impl Chat {
 
                 // Fallback to last_used_file_id if last_used_entity is None.
                 // Until this field is removed, we need to keep this logic.
-                let chat_entity = data.last_used_entity.or_else(|| {
+                let chat_entity = data.associated_entity.or_else(|| {
                     data.last_used_file_id
                         .map(|file_id| ChatEntity::ModelFile(file_id))
                 });
 
                 let chat = Chat {
                     id: data.id,
-                    last_used_entity: chat_entity,
+                    associated_entity: chat_entity,
                     messages: data.messages,
                     title: data.title,
                     title_state: data.title_state,
@@ -183,7 +188,7 @@ impl Chat {
     pub fn save(&self) {
         let data = ChatData {
             id: self.id,
-            last_used_entity: self.last_used_entity.clone(),
+            associated_entity: self.associated_entity.clone(),
             system_prompt: self.system_prompt.clone(),
             messages: self.messages.clone(),
             title: self.title.clone(),
@@ -332,7 +337,7 @@ impl Chat {
         });
 
         self.state = ChatState::Receiving;
-        self.last_used_entity = Some(ChatEntity::ModelFile(wanted_file.id.clone()));
+        self.associated_entity = Some(ChatEntity::ModelFile(wanted_file.id.clone()));
 
         let store_chat_tx = self.messages_update_sender.clone();
         let wanted_file = wanted_file.clone();
@@ -414,7 +419,6 @@ impl Chat {
         });
 
         self.state = ChatState::Receiving;
-        self.last_used_entity = Some(ChatEntity::Agent(agent.clone()));
 
         let store_chat_tx = self.messages_update_sender.clone();
         std::thread::spawn(move || {
