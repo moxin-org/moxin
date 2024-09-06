@@ -18,6 +18,7 @@ live_design!(
     AgentButton = {{AgentButton}} {
         flow: Right,
         width: Fill,
+        visible: false,
         height: 40,
         align: { x: 0.0, y: 0.5 },
         padding: { top: 4, top: 4 },
@@ -151,6 +152,7 @@ impl WidgetMatchEvent for AgentButton {
 
 impl AgentButton {
     pub fn set_agent(&mut self, agent: &MaeAgent, show_description: bool) {
+        self.visible = true;
         self.label(id!(caption)).set_text(&agent.name());
         self.chat_agent_avatar(id!(agent_avatar)).set_agent(agent);
 

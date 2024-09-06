@@ -1,3 +1,4 @@
+pub mod agent_list;
 pub mod download_item;
 pub mod downloads;
 pub mod landing_screen;
@@ -16,6 +17,7 @@ use makepad_widgets::Cx;
 
 pub fn live_design(cx: &mut Cx) {
     shared::live_design(cx);
+    agent_list::live_design(cx);
     model_files_tags::live_design(cx);
     model_files_item::live_design(cx);
     model_files_list::live_design(cx);
