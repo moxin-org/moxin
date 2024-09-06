@@ -15,6 +15,7 @@ live_design! {
     import crate::landing::model_list::ModelList;
     import crate::landing::sorting::Sorting;
     import crate::landing::downloads::Downloads;
+    import crate::landing::agent_list::AgentList;
 
     Heading = <View> {
         width: Fill,
@@ -80,6 +81,18 @@ live_design! {
             flow: Down,
 
             search_bar = <SearchBar> {}
+
+            <View> {
+                width: Fill,
+                height: Fill,
+                show_bg: true,
+                draw_bg: {
+                    color: #aa000044,
+                }
+
+                <AgentList> {}
+            }
+
             models = <View> {
                 width: Fill,
                 height: Fill,
