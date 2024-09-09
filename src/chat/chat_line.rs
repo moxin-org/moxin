@@ -86,6 +86,15 @@ live_design! {
         list_item_walk:{margin:0, height:Fit, width:Fill}
         code_layout: { line_spacing: (BLOCK_LINE_SPACING), padding: {top: 10.0, bottom: 10.0}}
         quote_layout: { line_spacing: (BLOCK_LINE_SPACING), padding: {top: 10.0, bottom: 10.0}}
+
+        link = {
+            padding: { top: 1, bottom: 0 },
+            draw_text: {
+                color: #00f,
+                color_pressed: #f00,
+                color_hover: #0f0,
+            }
+        }
     }
 
     EditTextInput = <MoxinTextInput> {
