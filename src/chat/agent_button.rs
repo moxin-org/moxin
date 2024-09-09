@@ -1,12 +1,9 @@
 use makepad_widgets::*;
 use moxin_mae::MaeAgent;
 
-use crate::data::store::Store;
+use crate::shared::actions::{ChatAction, ChatHandler};
 
-use super::{
-    chat_history_card::ChatHistoryCardAction, prompt_input::PromptInputAction,
-    shared::ChatAgentAvatarWidgetExt,
-};
+use super::{prompt_input::PromptInputAction, shared::ChatAgentAvatarWidgetExt};
 
 live_design!(
     import makepad_widgets::base::*;
@@ -129,22 +126,16 @@ impl Widget for AgentButton {
 
 impl WidgetMatchEvent for AgentButton {
     fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, scope: &mut Scope) {
-        let store = scope.data.get_mut::<Store>().unwrap();
-
         let Some(agent) = self.agent else { return };
 
         if let Some(item) = actions.find_widget_action(self.view.widget_uid()) {
             if let ViewAction::FingerDown(fd) = item.cast() {
                 if fd.tap_count == 1 {
                     if self.create_new_chat {
-                        store.chats.create_empty_chat_with_agent(agent);
-
-                        // Make sure text input is focused and other necessary setup happens.
-                        let widget_uid = self.widget_uid();
                         cx.widget_action(
-                            widget_uid,
+                            self.widget_uid(),
                             &scope.path,
-                            ChatHistoryCardAction::ChatSelected,
+                            ChatAction::Start(ChatHandler::Agent(agent)),
                         );
                     }
 

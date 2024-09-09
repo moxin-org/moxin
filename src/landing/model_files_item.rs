@@ -5,7 +5,7 @@ use super::model_files_tags::ModelFilesTagsWidgetExt;
 use crate::{
     data::store::FileWithDownloadInfo,
     shared::{
-        actions::{ChatAction, DownloadAction},
+        actions::{ChatAction, ChatHandler, DownloadAction},
         utils::format_model_size,
     },
 };
@@ -334,7 +334,11 @@ impl WidgetMatchEvent for ModelFilesItem {
         }
 
         if self.button(id!(start_chat_button)).clicked(&actions) {
-            cx.widget_action(widget_uid, &scope.path, ChatAction::Start(file_id.clone()));
+            cx.widget_action(
+                widget_uid,
+                &scope.path,
+                ChatAction::Start(ChatHandler::Model(file_id.clone())),
+            );
         }
 
         if [id!(resume_download_button), id!(retry_download_button)]

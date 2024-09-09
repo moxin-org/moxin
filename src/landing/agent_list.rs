@@ -23,6 +23,7 @@ live_design! {
         button = <AgentButton> {
             width: Fill,
             height: Fill,
+            create_new_chat: true,
 
             draw_bg: {
                 radius: 5,
