@@ -133,20 +133,8 @@ live_design! {
                     agent_avatar = <ChatAgentAvatar> {
                         width: Fit,
                         height: Fit,
-                        reasoner_avatar = {
-                            image = {
-                                width: 20, height: 20, margin: {right: 8}
-                            }
-                        }
-                        research_scholar_avatar = {
-                            image = {
-                                width: 20, height: 20, margin: {right: 8}
-                            }
-                        }
-                        search_assistant_avatar = {
-                            image = {
-                                width: 20, height: 20, margin: {right: 8}
-                            }
+                        image = {
+                            width: 20, height: 20, margin: {right: 8}
                         }
                     }
                     <Label> {
