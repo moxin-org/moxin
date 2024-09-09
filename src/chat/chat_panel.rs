@@ -12,7 +12,7 @@ use crate::{
         chats::chat::{Chat, ChatEntity, ChatMessage},
         store::Store,
     },
-    shared::actions::ChatAction,
+    shared::actions::{ChatAction, ChatHandler},
 };
 
 use super::{
@@ -462,14 +462,13 @@ impl WidgetMatchEvent for ChatPanel {
                             Some(ChatEntity::ModelFile(downloaded_file.file.id.clone()));
                         chat.borrow().save();
                     }
-    
+
                     self.focus_on_prompt_input_pending = true;
                     self.redraw(cx)
                 }
                 ModelSelectorAction::AgentSelected(agent) => {
                     if let Some(chat) = store.chats.get_current_chat() {
-                        chat.borrow_mut().associated_entity =
-                            Some(ChatEntity::Agent(agent));
+                        chat.borrow_mut().associated_entity = Some(ChatEntity::Agent(agent));
                         chat.borrow().save();
                     }
 
@@ -491,12 +490,18 @@ impl WidgetMatchEvent for ChatPanel {
             }
 
             match action.cast() {
-                ChatAction::Start(file_id) => {
-                    if let Some(file) = store.downloads.get_file(&file_id) {
-                        store.chats.create_empty_chat_and_load_file(file);
+                ChatAction::Start(handler) => match handler {
+                    ChatHandler::Model(file_id) => {
+                        if let Some(file) = store.downloads.get_file(&file_id) {
+                            store.chats.create_empty_chat_and_load_file(file);
+                            self.focus_on_prompt_input_pending = true;
+                        }
+                    }
+                    ChatHandler::Agent(agent) => {
+                        store.chats.create_empty_chat_with_agent(agent);
                         self.focus_on_prompt_input_pending = true;
                     }
-                }
+                },
                 _ => {}
             }
 

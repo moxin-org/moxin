@@ -1,9 +1,10 @@
-use crate::shared::{actions::ChatAction, utils::human_readable_name};
+use super::{delete_model_modal::DeleteModelModalAction, model_info_modal::ModelInfoModalAction};
+use crate::shared::actions::ChatHandler;
 use crate::shared::modal::ModalWidgetExt;
 use crate::shared::utils::format_model_size;
+use crate::shared::{actions::ChatAction, utils::human_readable_name};
 use makepad_widgets::*;
 use moxin_protocol::data::{DownloadedFile, FileID};
-use super::{delete_model_modal::DeleteModelModalAction, model_info_modal::ModelInfoModalAction};
 
 live_design! {
     import makepad_widgets::base::*;
@@ -255,7 +256,11 @@ impl WidgetMatchEvent for DownloadedFilesRow {
 
         if self.button(id!(start_chat_button)).clicked(actions) {
             if let Some(file_id) = &self.file_id {
-                cx.widget_action(widget_uid, &scope.path, ChatAction::Start(file_id.clone()));
+                cx.widget_action(
+                    widget_uid,
+                    &scope.path,
+                    ChatAction::Start(ChatHandler::Model(file_id.clone())),
+                );
             }
         }
 
