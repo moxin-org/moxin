@@ -12,19 +12,44 @@ live_design! {
     import crate::shared::computed_list::*;
     import crate::chat::agent_button::*;
 
-    AgentCard = <AgentButton> {
+    AgentCard = <RoundedView> {
         width: Fill,
+        height: 100,
+        show_bg: false,
+        draw_bg: {
+            radius: 5,
+            color: #F9FAFB,
+        }
+        button = <AgentButton> {
+            width: Fill,
+            height: Fill,
+
+            draw_bg: {
+                radius: 5,
+            }
+            agent_avatar = {
+                image = {
+                    width: 64,
+                    height: 64,
+                }
+            }
+            text_layout = {
+                flow: Down,
+            }
+        }
     }
 
     AgentList = {{AgentList}} {
         width: Fill,
         height: Fit,
         flow: Down,
+        spacing: 15,
 
         agent_row_template: <View> {
             width: Fill,
             height: Fit,
             flow: Right,
+            spacing: 15,
 
             first = <AgentCard> {}
             second = <AgentCard> {}
@@ -60,17 +85,21 @@ impl LiveHook for AgentList {
         self.compute_from(agents.chunks(3), |chunk| {
             let row = WidgetRef::new_from_ptr(cx, agent_row_template);
 
-            if let Some(agent) = chunk.get(0) {
-                row.agent_button(id!(first)).set_agent(agent, true);
-            }
-
-            if let Some(agent) = chunk.get(1) {
-                row.agent_button(id!(second)).set_agent(agent, true);
-            }
-
-            if let Some(agent) = chunk.get(2) {
-                row.agent_button(id!(third)).set_agent(agent, true);
-            }
+            [id!(first), id!(second), id!(third)]
+                .iter()
+                .enumerate()
+                .for_each(|(i, id)| {
+                    if let Some(agent) = chunk.get(i) {
+                        let cell = row.view(*id);
+                        cell.apply_over(
+                            cx,
+                            live! {
+                                show_bg: true,
+                            },
+                        );
+                        cell.agent_button(id!(button)).set_agent(agent, true);
+                    }
+                });
 
             row
         });
