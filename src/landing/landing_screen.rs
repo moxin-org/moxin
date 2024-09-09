@@ -84,11 +84,9 @@ live_design! {
 
             <View> {
                 width: Fill,
-                height: Fill,
-                show_bg: true,
-                draw_bg: {
-                    color: #aa000044,
-                }
+                height: Fit,
+                spacing: 30,
+                margin: { left: 50, right: 50, top: 30 },
 
                 <AgentList> {}
             }

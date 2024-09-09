@@ -15,46 +15,53 @@ live_design!(
     import crate::shared::widgets::*;
     import crate::chat::shared::ChatAgentAvatar;
 
-    AgentButton = {{AgentButton}} {
+    AgentButton = {{AgentButton}} <RoundedView> {
         flow: Right,
         width: Fill,
         visible: false,
         height: 40,
         align: { x: 0.0, y: 0.5 },
-        padding: { top: 4, top: 4 },
+        padding: { top: 4, bottom: 4 },
         spacing: 10,
 
         cursor: Hand
         show_bg: true,
         draw_bg: {
+            radius: 0,
             color: #0000
         }
 
         agent_avatar = <ChatAgentAvatar> {
             padding: { left: 9 },
         }
-        caption = <Label> {
+        text_layout = <View> {
             width: Fit,
             height: Fit,
-            draw_text: {
-                text_style: <BOLD_FONT>{font_size: 10},
-                color: #000;
-            }
-        }
-        description = <View> {
-            visible: false,
-            width: Fit,
-            height: Fit,
-            label = <Label> {
+            flow: Right,
+            spacing: 10
+
+            caption = <Label> {
                 width: Fit,
                 height: Fit,
                 draw_text: {
-                    text_style: <REGULAR_FONT>{font_size: 9},
-                    color: #667085,
+                    text_style: <BOLD_FONT>{font_size: 10},
+                    color: #000;
+                }
+            }
+            description = <View> {
+                visible: false,
+                width: Fit,
+                height: Fit,
+                label = <Label> {
+                    width: Fit,
+                    height: Fit,
+                    draw_text: {
+                        text_style: <REGULAR_FONT>{font_size: 9},
+                        color: #667085,
+                    }
                 }
             }
         }
-
         animator: {
             hover = {
                 default: off
