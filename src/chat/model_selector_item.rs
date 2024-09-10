@@ -2,7 +2,7 @@ use makepad_widgets::*;
 use moxin_mae::MaeAgent;
 use moxin_protocol::data::DownloadedFile;
 
-use super::prompt_input::PromptInputAction;
+use super::shared::ChatAgentAvatarWidgetExt;
 
 live_design! {
     import makepad_widgets::base::*;
@@ -128,6 +128,8 @@ impl ModelSelectorItemRef {
     pub fn set_agent(&mut self, agent: MaeAgent) {
         let Some(mut inner) = self.borrow_mut() else { return };
         inner.entity = ModelSelectorEntity::Agent(agent);
+
+        inner.chat_agent_avatar(id!(avatar)).set_agent(&agent);
     }
 }
 

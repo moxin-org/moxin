@@ -10,7 +10,7 @@ use makepad_widgets::*;
 use super::{
     model_selector_item::ModelSelectorAction,
     model_selector_list::ModelSelectorListWidgetExt,
-    model_selector_loading::ModelSelectorLoadingWidgetExt,
+    model_selector_loading::ModelSelectorLoadingWidgetExt, shared::ChatAgentAvatarWidgetRefExt,
 };
 
 live_design! {
@@ -418,6 +418,9 @@ impl ModelSelector {
                     label = { text: (agent.name()) }
                 },
             );
+            selected_view
+                .chat_agent_avatar(id!(avatar))
+                .set_agent(&agent);
 
             return;
         } 

@@ -5,6 +5,7 @@ live_design! {
     import makepad_widgets::theme_desktop_dark::*;
 
     import crate::shared::styles::*;
+    import crate::chat::shared::ChatAgentAvatar;
 
     ICON_TICK = dep("crate://self/resources/images/tick.png")
 
@@ -83,11 +84,27 @@ live_design! {
         height: Fit,
         padding: 16,
 
+        align: {x: 0.0, y: 0.5},
+        spacing: 10,
+
         cursor: Hand,
+
+        avatar = <ChatAgentAvatar> {}
+
         label = <Label> {
             draw_text:{
                 text_style: <REGULAR_FONT>{font_size: 11},
                 color: #000
+            }
+        }
+
+        icon_tick_tag = <RoundedView> {
+            align: {x: 1.0, y: 0.5}, 
+            visible: false,
+            icon_tick = <Image> {
+                width: 14,
+                height: 14,
+                source: (ICON_TICK),
             }
         }
     }

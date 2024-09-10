@@ -1,6 +1,9 @@
-use crate::{data::store::Store, shared::utils::format_model_size};
+use crate::{
+    data::{chats::chat::ChatEntity, store::Store},
+    shared::utils::format_model_size,
+};
 use makepad_widgets::*;
-use moxin_mae::{MaeAgent, MaeBackend};
+use moxin_mae::MaeBackend;
 use moxin_protocol::data::DownloadedFile;
 use std::collections::HashMap;
 
@@ -61,19 +64,6 @@ impl Widget for ModelSelectorList {
         for (_, item) in self.items.iter_mut() {
             item.handle_event(cx, event, scope)
         }
-        //     let actions = cx.capture_actions(|cx| item.handle_event(cx, event, scope));
-        //     if let Some(fd) = item.as_view().finger_down(&actions) {
-        //         if fd.tap_count == 1 {
-        //             cx.widget_action(
-        //                 widget_uid,
-        //                 &scope.path,
-        //                 ModelSelectorAction::Selected(
-        //                     self.map_to_downloaded_files.get(id).unwrap().clone(),
-        //                 ),
-        //             );
-        //         }
-        //     }
-        // }
     }
 
     fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, walk: Walk) -> DrawStep {
@@ -98,11 +88,17 @@ impl ModelSelectorList {
         self.map_to_downloaded_files = HashMap::new();
         let mut total_height = 0.0;
         let models_count = models.len();
+
+        let chat_entity = store
+            .chats
+            .get_current_chat()
+            .and_then(|c| c.borrow().associated_entity.clone());
+
         for i in 0..models.len() {
             let item_id = LiveId(i as u64).into();
-            let item_widget = self
-                .items
-                .get_or_insert(cx, item_id, |cx| WidgetRef::new_from_ptr(cx, self.model_template));
+            let item_widget = self.items.get_or_insert(cx, item_id, |cx| {
+                WidgetRef::new_from_ptr(cx, self.model_template)
+            });
             self.map_to_downloaded_files
                 .insert(item_id, models[i].clone());
 
@@ -117,10 +113,12 @@ impl ModelSelectorList {
             let size = format_model_size(&models[i].file.size).unwrap_or("".to_string());
             let size_visible = !size.trim().is_empty();
 
-            let mut icon_tick_visible = false;
-            if let Some(loaded_model) = store.get_loaded_downloaded_file() {  
-                icon_tick_visible = self.map_to_downloaded_files.get(&item_id).unwrap().file.id == loaded_model.file.id;
-            }
+            let current_file_id = match chat_entity {
+                Some(ChatEntity::ModelFile(ref file_id)) => Some(file_id.clone()),
+                Some(ChatEntity::Agent(_)) => None,
+                _ => store.chats.loaded_model.as_ref().map(|m| m.id.clone()),
+            };
+            let icon_tick_visible = current_file_id.as_ref() == Some(&self.map_to_downloaded_files.get(&item_id).unwrap().file.id);
 
             item_widget.apply_over(
                 cx,
@@ -135,7 +133,9 @@ impl ModelSelectorList {
                 },
             );
 
-            item_widget.as_model_selector_item().set_model(models[i].clone());
+            item_widget
+                .as_model_selector_item()
+                .set_model(models[i].clone());
 
             let _ = item_widget.draw_all(cx, &mut Scope::empty());
             total_height += item_widget.view(id!(content)).area().rect(cx).size.y;
@@ -143,9 +143,9 @@ impl ModelSelectorList {
 
         if models_count > 0 {
             let separator_id = LiveId(models_count as u64).into();
-            let separator_widget = self
-                .items
-                .get_or_insert(cx, separator_id, |cx| WidgetRef::new_from_ptr(cx, self.separator_template));
+            let separator_widget = self.items.get_or_insert(cx, separator_id, |cx| {
+                WidgetRef::new_from_ptr(cx, self.separator_template)
+            });
             let _ = separator_widget.draw_all(cx, &mut Scope::empty());
             total_height += separator_widget.as_view().area().rect(cx).size.y;
         }
@@ -153,23 +153,33 @@ impl ModelSelectorList {
         let agents = MaeBackend::available_agents();
         for i in 0..agents.len() {
             let item_id = LiveId((models_count + 1 + i) as u64).into();
-            let item_widget = self
-                .items
-                .get_or_insert(cx, item_id, |cx| WidgetRef::new_from_ptr(cx, self.agent_template));
+            let item_widget = self.items.get_or_insert(cx, item_id, |cx| {
+                WidgetRef::new_from_ptr(cx, self.agent_template)
+            });
 
             let agent_name = &agents[i].name();
+            let current_agent_name = match chat_entity {
+                Some(ChatEntity::Agent(agent)) => Some(agent.name()),
+                _ => None,
+            };
+            let icon_tick_visible = current_agent_name.as_ref() == Some(agent_name);
+
             item_widget.apply_over(
                 cx,
                 live! {
-                    content = { label = { text: (agent_name) } }
+                    content = {
+                        label = { text: (agent_name) }
+                        icon_tick_tag = { visible: (icon_tick_visible) }
+                    }
                 },
             );
-            item_widget.as_model_selector_item().set_agent(agents[i].clone());
+            item_widget
+                .as_model_selector_item()
+                .set_agent(agents[i].clone());
 
             let _ = item_widget.draw_all(cx, &mut Scope::empty());
             total_height += item_widget.view(id!(content)).area().rect(cx).size.y;
         }
-
 
         self.total_height = Some(total_height);
     }
