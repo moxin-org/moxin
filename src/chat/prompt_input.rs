@@ -8,7 +8,7 @@ use super::{
     shared::ChatAgentAvatarWidgetExt,
 };
 
-#[derive(Debug, DefaultNone)]
+#[derive(Debug, DefaultNone, Clone)]
 pub enum PromptInputAction {
     AgentSelected(MaeAgent),
     None,
@@ -318,13 +318,6 @@ impl WidgetMatchEvent for PromptInput {
                 }
             }
 
-            match action.cast() {
-                ModelSelectorAction::ModelSelected(_) | ModelSelectorAction::AgentSelected(_) => {
-                    self.on_agent_deselected()
-                }
-                _ => (),
-            }
-
             if let ChatAction::Start(_) = action.cast() {
                 self.on_agent_deselected();
             }
@@ -334,13 +327,17 @@ impl WidgetMatchEvent for PromptInput {
             self.on_agent_deselected();
         }
 
-        if let Some(action) = actions
-            .iter()
-            .find_map(|a| a.downcast_ref::<PromptInputAction>())
-        {
-            match action {
-                PromptInputAction::AgentSelected(agent) => self.on_agent_selected(agent),
+        for action in actions {
+            match action.cast() {
+                PromptInputAction::AgentSelected(agent) => self.on_agent_selected(&agent),
                 PromptInputAction::None => {}
+            }
+
+            match action.cast() {
+                ModelSelectorAction::ModelSelected(_) | ModelSelectorAction::AgentSelected(_) => {
+                    self.on_agent_deselected()
+                }
+                _ => (),
             }
         }
     }
