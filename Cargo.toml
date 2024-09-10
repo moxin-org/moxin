@@ -30,8 +30,7 @@ moxin-backend = { path = "moxin-backend" }
 moxin-fake-backend = { path = "moxin-fake-backend" }
 moxin-mae = { path = "moxin-mae"}
 
-# makepad-widgets = { git = "https://github.com/makepad/makepad", branch = "rik" }
-makepad-widgets = { path = "../makepad/widgets" }
+makepad-widgets = { git = "https://github.com/makepad/makepad", branch = "rik" }
 
 robius-open = "0.1.1"
 robius-url-handler = { git = "https://github.com/project-robius/robius-url-handler" }

@@ -102,8 +102,8 @@ impl Store {
             eprintln!("No AgentOps API key found");
         }
 
-        //let mae_backend = Rc::new(MaeBackend::new(options));
-        let mae_backend = Rc::new(MaeBackend::new_fake());
+        let mae_backend = Rc::new(MaeBackend::new(options));
+        //let mae_backend = Rc::new(MaeBackend::new_fake());
 
         let mut store = Self {
             backend: backend.clone(),
