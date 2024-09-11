@@ -22,21 +22,15 @@ live_design! {
         align: {x: 0.0, y: 0.5},
 
         show_bg: true,
-
         draw_bg: {
-            color: #EBFCFF,
-            instance color2: #CBE3E8,
+            instance initial_color: #eff5dc,
+            instance mid_color: #ebfcff,
+            instance final_color: #daecec,
+
             fn get_color(self) -> vec4 {
-                let coef = self.rect_size.y / self.rect_size.x;
-
-                let distance_vec = self.pos - vec2(0.8, 1.1);
-                let norm_distance = length(vec2(distance_vec.x, distance_vec.y * coef) * 2.2);
-
-                if pow(norm_distance, 1.4) > 1.0 {
-                    return self.color;
-                } else {
-                    return mix(self.color2, self.color, pow(norm_distance, 1.4));
-                }
+                let a = mix(self.mid_color, self.final_color, self.pos.x);
+                let b = mix(self.initial_color, a, self.pos.x);
+                return b;
             }
 
             fn pixel(self) -> vec4 {
