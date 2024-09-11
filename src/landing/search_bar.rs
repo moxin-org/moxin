@@ -16,12 +16,12 @@ live_design! {
     ICON_SEARCH = dep("crate://self/resources/icons/search.svg")
 
     SearchBar = {{SearchBar}} {
+        flow: Right,
         width: Fill,
-        height: 200,
-
-        flow: Down,
-        spacing: 30,
-        align: {x: 0.5, y: 0.5},
+        height: 100,
+        spacing: 80,
+        padding: {left: 20},
+        align: {x: 0.0, y: 0.5},
 
         show_bg: true,
 
@@ -46,20 +46,8 @@ live_design! {
             }
         }
 
-        title = <View> {
-            width: Fit,
-            height: Fit,
-            <Label> {
-                draw_text:{
-                    text_style: <REGULAR_FONT>{font_size: 13},
-                    color: #000
-                }
-                text: "Discover, download, and run local LLMs"
-            }
-        }
-
         input_container = <RoundedView> {
-            width: 800,
+            width: Fill,
             height: Fit,
 
             show_bg: true,
@@ -97,29 +85,10 @@ live_design! {
         }
 
         search_sorting = <View> {
-            visible: false,
             width: 300,
             height: Fit,
             margin: {left: 30, right: 30},
             <Sorting> {}
-        }
-
-        animator: {
-            search_bar = {
-                default: expanded,
-                collapsed = {
-                    redraw: true,
-                    from: {all: Forward {duration: 0.3}}
-                    ease: ExpDecay {d1: 0.80, d2: 0.97}
-                    apply: { height: 100 }
-                }
-                expanded = {
-                    redraw: true,
-                    from: {all: Forward {duration: 0.3}}
-                    ease: ExpDecay {d1: 0.80, d2: 0.97}
-                    apply: { height: 200 }
-                }
-            }
         }
     }
 }
@@ -211,47 +180,10 @@ impl SearchBarRef {
         }
         inner.collapsed = true;
 
-        inner.apply_over(
-            cx,
-            live! {
-                flow: Right,
-                title = { visible: false }
-                align: {x: 0.0, y: 0.5},
-                padding: {left: 20},
-                spacing: 80,
-                input_container = { width: Fill }
-                search_sorting = { visible: true }
-            },
-        );
-
         inner
             .sorting(id!(search_sorting))
             .set_selected_item(selected_sort);
-        inner.animator_play(cx, id!(search_bar.collapsed));
     }
 
-    pub fn expand(&self, cx: &mut Cx) {
-        let Some(mut inner) = self.borrow_mut() else {
-            return;
-        };
-        if !inner.collapsed {
-            return;
-        }
-        inner.collapsed = false;
-
-        inner.apply_over(
-            cx,
-            live! {
-                flow: Down,
-                title = { visible: true }
-                align: {x: 0.5, y: 0.5},
-                padding: {left: 0},
-                spacing: 50,
-                input_container = { width: 800 }
-                search_sorting = { visible: false }
-            },
-        );
-
-        inner.animator_play(cx, id!(search_bar.expanded));
-    }
+    pub fn expand(&self, cx: &mut Cx) {}
 }
