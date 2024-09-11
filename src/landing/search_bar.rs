@@ -1,6 +1,4 @@
-use crate::data::search::SortCriteria;
 use crate::data::store::StoreAction;
-use crate::landing::sorting::SortingWidgetExt;
 use makepad_widgets::*;
 
 live_design! {
@@ -98,12 +96,6 @@ pub struct SearchBar {
     #[deref]
     view: View,
 
-    #[animator]
-    animator: Animator,
-
-    #[rust]
-    collapsed: bool,
-
     #[rust]
     search_timer: Timer,
 
@@ -115,9 +107,6 @@ impl Widget for SearchBar {
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
         self.view.handle_event(cx, event, scope);
         self.widget_match_event(cx, event, scope);
-        if self.animator_handle_event(cx, event).must_redraw() {
-            self.redraw(cx);
-        }
 
         if self.search_timer.is_event(event).is_some() {
             self.search_timer = Timer::default();
@@ -168,22 +157,4 @@ impl WidgetMatchEvent for SearchBar {
             self.search_timer = cx.start_timeout(self.search_debounce_time);
         }
     }
-}
-
-impl SearchBarRef {
-    pub fn collapse(&self, cx: &mut Cx, selected_sort: SortCriteria) {
-        let Some(mut inner) = self.borrow_mut() else {
-            return;
-        };
-        if inner.collapsed {
-            return;
-        }
-        inner.collapsed = true;
-
-        inner
-            .sorting(id!(search_sorting))
-            .set_selected_item(selected_sort);
-    }
-
-    pub fn expand(&self, cx: &mut Cx) {}
 }

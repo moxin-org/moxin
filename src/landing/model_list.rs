@@ -98,8 +98,7 @@ impl Widget for ModelList {
 
                     if item_id < models_count {
                         let model = &models[item_id];
-                        let mut model_with_download_info =
-                            store.add_download_info_to_model(model);
+                        let mut model_with_download_info = store.add_download_info_to_model(model);
                         item.draw_all(cx, &mut Scope::with_data(&mut model_with_download_info));
                     }
                 }
@@ -110,17 +109,8 @@ impl Widget for ModelList {
     }
 }
 
-#[derive(Clone, DefaultNone, Debug)]
-pub enum ModelListAction {
-    None,
-    ScrolledAtTop,
-    ScrolledNotAtTop,
-}
-
-const SCROLLING_AT_TOP_THRESHOLD: f64 = -30.0;
-
 impl WidgetMatchEvent for ModelList {
-    fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, scope: &mut Scope) {
+    fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, _scope: &mut Scope) {
         let portal_list = self.portal_list(id!(list));
 
         for action in actions.iter() {
@@ -134,17 +124,6 @@ impl WidgetMatchEvent for ModelList {
                     self.redraw(cx);
                 }
                 _ => {}
-            }
-        }
-
-        if portal_list.scrolled(actions) {
-            let widget_uid = self.widget_uid();
-            if portal_list.first_id() == 0
-                && portal_list.scroll_position() > SCROLLING_AT_TOP_THRESHOLD
-            {
-                cx.widget_action(widget_uid, &scope.path, ModelListAction::ScrolledAtTop);
-            } else {
-                cx.widget_action(widget_uid, &scope.path, ModelListAction::ScrolledNotAtTop);
             }
         }
     }
