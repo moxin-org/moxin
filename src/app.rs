@@ -32,7 +32,7 @@ live_design! {
 
     App = {{App}} {
         ui: <Window> {
-            window: {inner_size: vec2(1440, 1024)},
+            window: {inner_size: vec2(1440.0, 1024.0)},
             pass: {clear_color: #fff}
 
             caption_bar = {
@@ -118,13 +118,19 @@ live_design! {
 
 app_main!(App);
 
-#[derive(Live, LiveHook)]
+#[derive(Live)]
 pub struct App {
     #[live]
     ui: WidgetRef,
 
     #[rust]
     store: Store,
+
+    #[rust]
+    screen_width: f64,
+
+    #[rust]
+    screen_length: f64,
 }
 
 impl LiveRegister for App {
@@ -134,7 +140,17 @@ impl LiveRegister for App {
         crate::shared::live_design(cx);
         crate::landing::live_design(cx);
         crate::chat::live_design(cx);
-        crate::my_models::live_design(cx);
+        crate::my_models::live_design(cx);  
+    }
+}
+
+impl LiveHook for App {
+    fn before_apply(&mut self, cx: &mut Cx, _apply: &mut Apply, _index: usize, _nodes: &[LiveNode]) {
+        self.ui.as_window().set_inner_size(cx, vec2(1440.0, 1024.0).into());
+    }
+    fn after_new_from_doc(&mut self, cx:&mut Cx){
+        // self.ui.window(id!(window)).set_inner_size(cx, vec2(1440.0, 1024.0).into());
+        self.ui.as_window().set_inner_size(cx, vec2(1440.0, 1024.0).into());
     }
 }
 
@@ -150,6 +166,10 @@ impl AppMain for App {
         let scope = &mut Scope::with_data(&mut self.store);
         self.ui.handle_event(cx, event, scope);
         self.match_event(cx, event);
+
+        // self.ui.window(id!(window)).set_inner_size(cx, vec2(1440.0, 1024.0).into());
+        self.ui.as_window().set_inner_size(cx, vec2(1440.0, 1024.0).into());
+
     }
 }
 
@@ -209,6 +229,17 @@ impl MatchEvent for App {
                     self.store.downloads.cancel_download_file(&file_id);
                     self.ui.redraw(cx);
                 }
+                _ => {}
+            }
+
+            match action.as_widget_action().cast() {
+                WindowAction::WindowGeomChange(ce) => {
+                    self.screen_width = ce.new_geom.inner_size.x;
+                    self.screen_length = ce.new_geom.inner_size.y;
+                    log!("the width of the window: {}, the length of the window: {}", self.screen_width, self.screen_length);
+                    self.store.preferences.set_size_of_window((self.screen_width, self.screen_length));
+                    self.ui.redraw(cx);
+                },
                 _ => {}
             }
 

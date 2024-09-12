@@ -10,6 +10,7 @@ const PREFERENCES_FILENAME: &str = "preferences.json";
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Preferences {
+    pub size_of_window: (f64,f64),
     pub current_chat_model: Option<FileID>,
     #[serde(default)]
     pub downloaded_files_dir: PathBuf,
@@ -31,6 +32,7 @@ impl Preferences {
 
             // If no preferences file exists, create default preferences
             Self {
+                size_of_window: (1440.00, 1024.00),
                 current_chat_model: None,
                 downloaded_files_dir: setup_model_downloads_folder(),
             }
@@ -52,6 +54,12 @@ impl Preferences {
     pub fn set_downloaded_files_dir(&mut self, path: PathBuf) {
         self.downloaded_files_dir = path;
         self.save();
+    }
+
+    pub fn set_size_of_window(&mut self, size: (f64, f64)) {
+        self.size_of_window = size;
+        self.save();
+        println!("the store size is {:?}", size);
     }
 }
 
