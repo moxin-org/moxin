@@ -1,4 +1,4 @@
-use super::chats::chat::ChatID;
+use super::chats::chat::{ChatEntity, ChatID};
 use super::filesystem::project_dirs;
 use super::preferences::Preferences;
 use super::search::SortCriteria;
@@ -7,7 +7,9 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use makepad_widgets::{DefaultNone, SignalToUI};
 use moxin_backend::Backend;
+use moxin_mae::{MaeAgent, MaeBackend};
 use moxin_protocol::data::{Author, DownloadedFile, File, FileID, Model, ModelID, PendingDownload};
+use std::collections::HashMap;
 use std::rc::Rc;
 
 pub const DEFAULT_MAX_DOWNLOAD_THREADS: usize = 3;
@@ -45,6 +47,8 @@ pub struct Store {
     /// communicate with the backend thread.
     pub backend: Rc<Backend>,
 
+    pub mae_backend: Rc<MaeBackend>,
+
     pub search: Search,
     pub downloads: Downloads,
     pub chats: Chats,
@@ -59,7 +63,7 @@ impl Default for Store {
 
 impl Store {
     pub fn new() -> Self {
-        let preferences = Preferences::load();
+        let mut preferences = Preferences::load();
         let app_data_dir = project_dirs().data_dir();
 
         let backend = Rc::new(Backend::new(
@@ -68,11 +72,46 @@ impl Store {
             DEFAULT_MAX_DOWNLOAD_THREADS,
         ));
 
+        // Temporary solution to load API keys from environment variables
+        if std::env::var("MODEL_API_KEY").is_ok() {
+            preferences.open_ai_api_key = Some(std::env::var("MODEL_API_KEY").unwrap());
+        }
+        if std::env::var("SERPER_API_KEY").is_ok() {
+            preferences.serper_api_key = Some(std::env::var("SERPER_API_KEY").unwrap());
+        }
+        if std::env::var("AGENTOPS_API_KEY").is_ok() {
+            preferences.agentops_api_key = Some(std::env::var("AGENTOPS_API_KEY").unwrap());
+        }
+        preferences.save();
+        // End of temporary solution
+
+        let mut options: HashMap<String, String> = HashMap::new();
+        if let Some(api_key) = &preferences.open_ai_api_key {
+            options.insert("model_api_key".to_string(), api_key.to_string());
+        } else {
+            eprintln!("No OpenAI API key found");
+        }
+        if let Some(api_key) = &preferences.serper_api_key {
+            options.insert("serper_api_key".to_string(), api_key.to_string());
+        } else {
+            eprintln!("No Serper API key found");
+        }
+        if let Some(api_key) = &preferences.agentops_api_key {
+            options.insert("agentops_api_key".to_string(), api_key.to_string());
+        } else {
+            eprintln!("No AgentOps API key found");
+        }
+
+        let mae_backend = Rc::new(MaeBackend::new(options));
+        //let mae_backend = Rc::new(MaeBackend::new_fake());
+
         let mut store = Self {
             backend: backend.clone(),
+            mae_backend: mae_backend.clone(),
+
             search: Search::new(backend.clone()),
             downloads: Downloads::new(backend.clone()),
-            chats: Chats::new(backend),
+            chats: Chats::new(backend, mae_backend),
             preferences,
         };
 
@@ -111,53 +150,58 @@ impl Store {
         }
     }
 
-    pub fn send_chat_message(&mut self, prompt: String) {
+    pub fn send_message_to_current_entity(&mut self, prompt: String, regenerate_from: Option<usize>) {
+        let entity = self.chats.get_current_chat().and_then(|c| c.borrow().associated_entity.clone());
+
+        match entity {
+            Some(ChatEntity::Agent(agent)) => {
+                self.send_agent_message(agent, prompt, regenerate_from);
+            }
+            _ => {
+                self.send_chat_message(prompt, regenerate_from);
+            }
+        }
+    }
+
+    pub fn send_chat_message(&mut self, prompt: String, regenerate_from: Option<usize>) {
         if let Some(mut chat) = self.chats.get_current_chat().map(|c| c.borrow_mut()) {
             let wanted_file = self
                 .chats
-                .get_or_init_chat_file_id(&mut chat)
+                .get_chat_file_id(&mut chat)
                 .map(|file_id| self.downloads.get_file(&file_id))
                 .flatten();
 
             if let Some(file) = wanted_file {
+                if let Some(message_id) = regenerate_from {
+                    chat.remove_messages_from(message_id);
+                }
                 chat.send_message_to_model(
                     prompt,
                     file,
                     self.chats.model_loader.clone(),
-                    &self.backend,
+                    &self.backend
                 );
                 chat.save();
             }
+        }
+    }
+
+    pub fn agents_list(&self) -> Vec<MaeAgent> {
+        MaeBackend::available_agents()
+    }
+
+    pub fn send_agent_message(&self, agent: MaeAgent, prompt: String, regenerate_from: Option<usize>) {
+        if let Some(mut chat) = self.chats.get_current_chat().map(|c| c.borrow_mut()) {
+            if let Some(message_id) = regenerate_from {
+                chat.remove_messages_from(message_id);
+            }
+            chat.send_message_to_agent(agent, prompt, &self.mae_backend);
         }
     }
 
     pub fn edit_chat_message(&mut self, message_id: usize, updated_message: String) {
         if let Some(mut chat) = self.chats.get_current_chat().map(|c| c.borrow_mut()) {
             chat.edit_message(message_id, updated_message);
-            chat.save();
-        }
-    }
-
-    // Enhancement: Would be ideal to just have a `regenerate_from` function` to be
-    // used after `edit_chat_message` and keep concerns separated.
-    pub fn edit_chat_message_regenerating(&mut self, message_id: usize, updated_message: String) {
-        if let Some(mut chat) = self.chats.get_current_chat().map(|c| c.borrow_mut()) {
-            let wanted_file = self
-                .chats
-                .get_or_init_chat_file_id(&mut chat)
-                .map(|file_id| self.downloads.get_file(&file_id))
-                .flatten();
-
-            if let Some(file) = wanted_file {
-                chat.remove_messages_from(message_id);
-                chat.send_message_to_model(
-                    updated_message,
-                    file,
-                    self.chats.model_loader.clone(),
-                    &self.backend,
-                );
-                chat.save();
-            }
         }
     }
 
@@ -181,19 +225,24 @@ impl Store {
         }
     }
 
-    pub fn get_last_used_file_initial_letter(&self, chat_id: ChatID) -> Option<char> {
+    pub fn get_chat_entity_name(&self, chat_id: ChatID) -> Option<String> {
         let Some(chat) = self.chats.get_chat_by_id(chat_id) else {
             return None;
         };
-        let Some(ref file_id) = chat.borrow().last_used_file_id else {
-            return None;
-        };
 
-        self.downloads
-            .downloaded_files
-            .iter()
-            .find(|df| df.file.id == *file_id)
-            .map(|df| df.file.name.chars().next())?
+        match chat.borrow().associated_entity {
+            Some(ChatEntity::ModelFile(ref file_id)) => self
+                .downloads
+                .downloaded_files
+                .iter()
+                .find(|df| df.file.id == *file_id)
+                .map(|df| Some(df.file.name.clone()))?,
+            Some(ChatEntity::Agent(agent)) => Some(agent.name()),
+            None => {
+                // Fallback to loaded model if exists
+                self.chats.loaded_model.as_ref().map(|m| m.name.clone())
+            },
+        }
     }
 
     /// This function combines the search results information for a given model

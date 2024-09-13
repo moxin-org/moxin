@@ -6,16 +6,19 @@ use crate::{
     chat::{
         chat_line::{ChatLineAction, ChatLineWidgetRefExt},
         model_selector::ModelSelectorWidgetExt,
-        model_selector_list::ModelSelectorAction,
+        model_selector_item::ModelSelectorAction,
     },
     data::{
-        chats::chat::{Chat, ChatMessage},
+        chats::chat::{Chat, ChatEntity, ChatMessage},
         store::Store,
     },
-    shared::actions::ChatAction,
+    shared::actions::{ChatAction, ChatHandler},
 };
 
-use super::chat_history_card::ChatHistoryCardAction;
+use super::{
+    chat_history_card::ChatHistoryCardAction, prompt_input::PromptInputWidgetExt,
+    shared::ChatAgentAvatarWidgetRefExt,
+};
 
 live_design! {
     import makepad_widgets::base::*;
@@ -27,10 +30,10 @@ live_design! {
 
     import crate::chat::model_selector::ModelSelector;
     import crate::chat::chat_line::ChatLine;
+    import crate::chat::shared::ChatModelAvatar;
     import crate::chat::shared::ChatAgentAvatar;
+    import crate::chat::prompt_input::PromptInput;
 
-    ICON_PROMPT = dep("crate://self/resources/icons/prompt.svg")
-    ICON_STOP = dep("crate://self/resources/icons/stop.svg")
     ICON_JUMP_TO_BOTTOM = dep("crate://self/resources/icons/jump_to_bottom.svg")
 
     CircleButton = <MoxinButton> {
@@ -115,9 +118,6 @@ live_design! {
     }
 
     ModelChatLine = <ChatLine> {
-        avatar_section = {
-            <ChatAgentAvatar> {}
-        }
         main_section = {
             body_section = {
                 bubble = {
@@ -182,75 +182,6 @@ live_design! {
         }
     }
 
-    PromptButton = <CircleButton> {
-        width: 28,
-        height: 28,
-
-        draw_bg: {
-            radius: 6.5,
-            color: #D0D5DD
-        }
-        icon_walk: {
-            margin: {top: 0, left: -4},
-        }
-    }
-
-    ChatPromptInput = <RoundedView> {
-        width: Fill,
-        height: Fit,
-
-        show_bg: true,
-        draw_bg: {
-            color: #fff
-        }
-
-        padding: {top: 6, bottom: 6, left: 4, right: 10}
-
-        spacing: 4,
-        align: {x: 0.0, y: 1.0},
-
-        draw_bg: {
-            radius: 10.0,
-            border_color: #D0D5DD,
-            border_width: 1.0,
-        }
-
-        prompt = <MoxinTextInput> {
-            width: Fill,
-            height: Fit,
-
-            empty_message: "Enter a message"
-            draw_bg: {
-                radius: 30.0
-                color: #fff
-            }
-            draw_text: {
-                text_style:<REGULAR_FONT>{font_size: 10},
-
-                instance prompt_enabled: 0.0
-                fn get_color(self) -> vec4 {
-                    return mix(
-                        #98A2B3,
-                        #000,
-                        self.prompt_enabled
-                    )
-                }
-            }
-        }
-
-        prompt_send_button = <PromptButton> {
-            draw_icon: {
-                svg_file: (ICON_PROMPT),
-            }
-        }
-
-        prompt_stop_button = <PromptButton> {
-            draw_icon: {
-                svg_file: (ICON_STOP),
-            }
-        }
-    }
-
     ChatPanel = {{ChatPanel}} {
         flow: Overlay
         width: Fill
@@ -311,7 +242,7 @@ live_design! {
                     width: Fill, height: Fit
                     flow: Down,
                     align: {x: 0.5, y: 0.5},
-                    no_downloaded_model_prompt_input = <ChatPromptInput> {}
+                    no_downloaded_model_prompt_input = <PromptInput> {}
                 }
 
             }
@@ -352,7 +283,7 @@ live_design! {
                     width: Fill, height: Fit
                     flow: Down,
                     align: {x: 0.5, y: 0.5},
-                    no_model_prompt_input = <ChatPromptInput> {}
+                    no_model_prompt_input = <PromptInput> {}
                 }
 
             }
@@ -367,7 +298,12 @@ live_design! {
                 spacing: 30,
                 align: {x: 0.5, y: 0.5},
 
-                <ChatAgentAvatar> {}
+                avatar_section = <View> {
+                    width: Fit, height: Fit,
+                    model = <ChatModelAvatar> {}
+                    agent = <ChatAgentAvatar> { visible: false }
+                }
+
                 <Label> {
                     draw_text: {
                         text_style: <REGULAR_FONT>{font_size: 14},
@@ -387,27 +323,23 @@ live_design! {
                 spacing: 4,
                 flow: Down,
 
-                <View> {
+                chat = <PortalList> {
+                    margin: { bottom: 15 }
+                    scroll_bar: {
+                        bar_size: 0.0,
+                    }
                     width: Fill,
                     height: Fill,
 
-                    flow: Overlay
-                    chat = <PortalList> {
-                        scroll_bar: {
-                            bar_size: 0.0,
-                        }
-                        width: Fill,
-                        height: Fill,
+                    drag_scrolling: false,
 
-                        drag_scrolling: false,
-
-                        UserChatLine = <UserChatLine> {}
-                        ModelChatLine = <ModelChatLine> {}
-                        EndOfChat = <View> {height: 0.1}
-                    }
+                    UserChatLine = <UserChatLine> {}
+                    ModelChatLine = <ModelChatLine> {}
+                    EndOfChat = <View> {height: 0.1}
                 }
 
-                main_prompt_input = <ChatPromptInput> {}
+
+                main_prompt_input = <PromptInput> {}
             }
 
             model_selector = <ModelSelector> {}
@@ -431,7 +363,8 @@ enum State {
     ModelSelectedWithChat {
         is_loading: bool,
         sticked_to_bottom: bool,
-        is_streaming: bool,
+        receiving_response: bool,
+        was_cancelled: bool,
     },
 }
 
@@ -441,7 +374,8 @@ enum PromptInputMode {
 }
 enum PromptInputButton {
     Send,
-    Stop,
+    EnabledStop,
+    DisabledStop,
 }
 
 #[derive(Live, LiveHook, Widget)]
@@ -463,12 +397,14 @@ impl Widget for ChatPanel {
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
         self.view.handle_event(cx, event, scope);
         self.widget_match_event(cx, event, scope);
-        self.update_state(scope);
+
+        let store = scope.data.get_mut::<Store>().unwrap();
+        self.update_state(store);
 
         if let Event::Signal = event {
             match self.state {
                 State::ModelSelectedWithChat {
-                    is_streaming: true,
+                    receiving_response: true,
                     sticked_to_bottom,
                     ..
                 } => {
@@ -492,15 +428,18 @@ impl Widget for ChatPanel {
         // (not having any effect).
         if self.focus_on_prompt_input_pending {
             self.focus_on_prompt_input_pending = false;
-            let prompt_input = self.text_input(id!(main_prompt_input.prompt));
-            prompt_input.set_text("");
-            prompt_input.set_cursor(0, 0);
-            prompt_input.set_key_focus(cx);
+
+            self.prompt_input(id!(main_prompt_input)).reset_text(true);
         }
 
+        let message_list_uid = self.portal_list(id!(chat)).widget_uid();
         while let Some(view_item) = self.view.draw_walk(cx, scope, walk).step() {
-            if let Some(mut list) = view_item.as_portal_list().borrow_mut() {
-                self.draw_messages(cx, scope, &mut list);
+            if view_item.widget_uid() == message_list_uid {
+                self.draw_messages(
+                    cx,
+                    scope,
+                    &mut view_item.as_portal_list().borrow_mut().unwrap(),
+                );
             }
         }
 
@@ -513,6 +452,33 @@ impl WidgetMatchEvent for ChatPanel {
         let widget_uid = self.widget_uid();
         let store = scope.data.get_mut::<Store>().unwrap();
 
+        for action in actions {
+            match action.cast() {
+                ModelSelectorAction::ModelSelected(downloaded_file) => {
+                    store.load_model(&downloaded_file.file);
+
+                    if let Some(chat) = store.chats.get_current_chat() {
+                        chat.borrow_mut().associated_entity =
+                            Some(ChatEntity::ModelFile(downloaded_file.file.id.clone()));
+                        chat.borrow().save();
+                    }
+
+                    self.focus_on_prompt_input_pending = true;
+                    self.redraw(cx)
+                }
+                ModelSelectorAction::AgentSelected(agent) => {
+                    if let Some(chat) = store.chats.get_current_chat() {
+                        chat.borrow_mut().associated_entity = Some(ChatEntity::Agent(agent));
+                        chat.borrow().save();
+                    }
+
+                    self.focus_on_prompt_input_pending = true;
+                    self.redraw(cx);
+                }
+                _ => {}
+            }
+        }
+
         for action in actions
             .iter()
             .filter_map(|action| action.as_widget_action())
@@ -523,41 +489,19 @@ impl WidgetMatchEvent for ChatPanel {
                 self.redraw(cx);
             }
 
-            if let ModelSelectorAction::Selected(downloaded_file) = action.cast() {
-                store.load_model(&downloaded_file.file);
-
-                if let Some(chat) = store.chats.get_current_chat() {
-                    chat.borrow_mut().last_used_file_id = Some(downloaded_file.file.id.clone());
-                    chat.borrow().save();
-                }
-
-                self.focus_on_prompt_input_pending = true;
-                self.redraw(cx)
-            }
-
             match action.cast() {
-                ChatAction::Start(file_id) => {
-                    if let Some(file) = store.downloads.get_file(&file_id) {
-                        store.chats.create_empty_chat_and_load_file(file);
+                ChatAction::Start(handler) => match handler {
+                    ChatHandler::Model(file_id) => {
+                        if let Some(file) = store.downloads.get_file(&file_id) {
+                            store.chats.create_empty_chat_and_load_file(file);
+                            self.focus_on_prompt_input_pending = true;
+                        }
+                    }
+                    ChatHandler::Agent(agent) => {
+                        store.chats.create_empty_chat_with_agent(agent);
                         self.focus_on_prompt_input_pending = true;
                     }
-                }
-                _ => {}
-            }
-
-            match action.cast() {
-                ChatLineAction::Delete(id) => {
-                    store.chats.delete_chat_message(id);
-                    self.redraw(cx);
-                }
-                ChatLineAction::Edit(id, updated, regenerate) => {
-                    if regenerate {
-                        store.edit_chat_message_regenerating(id, updated)
-                    } else {
-                        store.edit_chat_message(id, updated);
-                    }
-                    self.redraw(cx);
-                }
+                },
                 _ => {}
             }
 
@@ -572,6 +516,23 @@ impl WidgetMatchEvent for ChatPanel {
                     self.unload_model(cx);
                 }
             }
+
+            match action.cast() {
+                ChatLineAction::Delete(id) => {
+                    store.chats.delete_chat_message(id);
+                    self.redraw(cx);
+                }
+                ChatLineAction::Edit(id, updated, regenerate) => {
+                    if regenerate {
+                        self.send_message(cx, store, updated, Some(id));
+                        return;
+                    } else {
+                        store.edit_chat_message(id, updated);
+                    }
+                    self.redraw(cx);
+                }
+                _ => {}
+            }
         }
 
         if self.button(id!(jump_to_bottom)).clicked(actions) {
@@ -581,14 +542,15 @@ impl WidgetMatchEvent for ChatPanel {
 
         match self.state {
             State::ModelSelectedWithChat {
-                is_streaming: false,
+                receiving_response: false,
                 ..
             }
             | State::ModelSelectedWithEmptyChat { .. } => {
                 self.handle_prompt_input_actions(cx, actions, scope);
             }
             State::ModelSelectedWithChat {
-                is_streaming: true, ..
+                receiving_response: true,
+                ..
             } => {
                 if self
                     .button(id!(main_prompt_input.prompt_stop_button))
@@ -610,10 +572,7 @@ impl WidgetMatchEvent for ChatPanel {
 }
 
 impl ChatPanel {
-    fn update_state(&mut self, scope: &mut Scope) {
-        let store = scope.data.get_mut::<Store>().unwrap();
-        //let loader = &store.chats.model_loader;
-
+    fn update_state(&mut self, store: &mut Store) {
         self.state = if store.downloads.downloaded_files.is_empty() {
             State::NoModelsAvailable
         } else if store.chats.loaded_model.is_none() {
@@ -631,7 +590,8 @@ impl ChatPanel {
                             is_loading,
                             sticked_to_bottom: self.portal_list_end_reached
                                 || !matches!(self.state, State::ModelSelectedWithChat { .. }),
-                            is_streaming: chat.borrow().is_streaming,
+                            receiving_response: chat.borrow().is_receiving(),
+                            was_cancelled: chat.borrow().was_cancelled(),
                         }
                     }
                 },
@@ -650,15 +610,31 @@ impl ChatPanel {
             State::ModelSelectedWithEmptyChat { is_loading: false }
             | State::ModelSelectedWithChat {
                 is_loading: false,
-                is_streaming: false,
+                receiving_response: false,
+                was_cancelled: false,
                 ..
             } => {
                 self.activate_prompt_input(cx, PromptInputMode::Enabled, PromptInputButton::Send);
             }
             State::ModelSelectedWithChat {
-                is_streaming: true, ..
+                receiving_response: true,
+                ..
             } => {
-                self.activate_prompt_input(cx, PromptInputMode::Disabled, PromptInputButton::Stop);
+                self.activate_prompt_input(
+                    cx,
+                    PromptInputMode::Disabled,
+                    PromptInputButton::EnabledStop,
+                );
+            }
+            State::ModelSelectedWithChat {
+                was_cancelled: true,
+                ..
+            } => {
+                self.activate_prompt_input(
+                    cx,
+                    PromptInputMode::Disabled,
+                    PromptInputButton::DisabledStop,
+                );
             }
             _ => {
                 // Input prompts should not be visible in other conditions
@@ -710,8 +686,7 @@ impl ChatPanel {
                 );
                 stop_button.set_visible(false);
             }
-            PromptInputButton::Stop => {
-                // The stop button is always enabled, when visible
+            PromptInputButton::EnabledStop => {
                 stop_button.set_visible(true);
                 stop_button.set_enabled(true);
                 stop_button.apply_over(
@@ -719,6 +694,19 @@ impl ChatPanel {
                     live! {
                         draw_bg: {
                             color: #x000
+                        }
+                    },
+                );
+                send_button.set_visible(false);
+            }
+            PromptInputButton::DisabledStop => {
+                stop_button.set_visible(true);
+                stop_button.set_enabled(false);
+                stop_button.apply_over(
+                    cx,
+                    live! {
+                        draw_bg: {
+                            color: #D0D5DD
                         }
                     },
                 );
@@ -754,36 +742,51 @@ impl ChatPanel {
             .button(id!(main_prompt_input.prompt_send_button))
             .clicked(&actions)
         {
-            self.send_message(cx, scope, prompt_input.text());
+            let store = scope.data.get_mut::<Store>().unwrap();
+            self.send_message(cx, store, prompt_input.text(), None);
         }
 
         if let Some(prompt) = prompt_input.returned(actions) {
-            self.send_message(cx, scope, prompt);
+            let store = scope.data.get_mut::<Store>().unwrap();
+            self.send_message(cx, store, prompt, None);
         }
     }
 
-    fn send_message(&mut self, cx: &mut Cx, scope: &mut Scope, prompt: String) {
+    fn send_message(
+        &mut self,
+        cx: &mut Cx,
+        store: &mut Store,
+        prompt: String,
+        regenerate_from: Option<usize>,
+    ) {
         // Check if we have any text to send
         if prompt.trim().is_empty() {
             return;
         }
 
         // Let's confirm we're in an appropriate state to send a message
-        self.update_state(scope);
+        self.update_state(store);
         if matches!(
             self.state,
             State::ModelSelectedWithChat {
-                is_streaming: false,
+                receiving_response: false,
+                was_cancelled: false,
                 is_loading: false,
                 ..
             } | State::ModelSelectedWithEmptyChat { is_loading: false }
         ) {
-            let store = scope.data.get_mut::<Store>().unwrap();
-            store.send_chat_message(prompt.clone());
+            if let Some(agent_selected) = self
+                .prompt_input(id!(main_prompt_input))
+                .borrow()
+                .unwrap()
+                .agent_selected
+            {
+                store.send_agent_message(agent_selected, prompt.clone(), regenerate_from);
+            } else {
+                store.send_message_to_current_entity(prompt.clone(), regenerate_from);
+            }
 
-            let prompt_input = self.text_input(id!(main_prompt_input.prompt));
-            prompt_input.set_text_and_redraw(cx, "");
-            prompt_input.set_cursor(0, 0);
+            self.prompt_input(id!(main_prompt_input)).reset_text(false);
 
             // Scroll to the bottom when the message is sent
             self.scroll_messages_to_bottom(cx);
@@ -799,9 +802,33 @@ impl ChatPanel {
             State::ModelSelectedWithEmptyChat { .. } => {
                 let store = scope.data.get::<Store>().unwrap();
 
-                self.view(id!(empty_conversation))
-                    .label(id!(avatar_label))
-                    .set_text(&get_model_initial_letter(store).unwrap_or('A').to_string());
+                let chat_entity = &get_chat(store).unwrap().borrow().associated_entity;
+                match chat_entity {
+                    Some(ChatEntity::Agent(agent)) => {
+                        let empty_view = self.view(id!(empty_conversation));
+                        empty_view
+                            .view(id!(avatar_section.model))
+                            .set_visible(false);
+                        empty_view
+                            .chat_agent_avatar(id!(avatar_section.agent))
+                            .set_visible(true);
+
+                        empty_view
+                            .chat_agent_avatar(id!(avatar_section.agent))
+                            .set_agent(agent);
+                    }
+                    _ => {
+                        let empty_view = self.view(id!(empty_conversation));
+                        empty_view.view(id!(avatar_section.model)).set_visible(true);
+                        empty_view
+                            .chat_agent_avatar(id!(avatar_section.agent))
+                            .set_visible(false);
+
+                        empty_view
+                            .label(id!(avatar_label))
+                            .set_text(&get_model_initial_letter(store).unwrap_or('A').to_string());
+                    }
+                }
             }
             _ => {}
         }
@@ -873,8 +900,18 @@ impl ChatPanel {
                     let username = chat_line_data.username.as_ref().map_or("", String::as_str);
                     chat_line_item.set_sender_name(&username);
                     chat_line_item.set_regenerate_button_visible(false);
-                    chat_line_item
-                        .set_avatar_text(&get_initial_letter(username).unwrap().to_string());
+
+                    match chat_line_data.entity {
+                        Some(ChatEntity::Agent(agent)) => {
+                            chat_line_item.set_model_avatar(&agent);
+                        }
+                        Some(ChatEntity::ModelFile(_)) => {
+                            chat_line_item.set_model_avatar_text(
+                                &get_model_initial_letter(store).unwrap().to_string(),
+                            );
+                        }
+                        _ => {}
+                    }
                 } else {
                     item = list.item(cx, item_id, live_id!(UserChatLine)).unwrap();
                     chat_line_item = item.as_chat_line();
@@ -888,7 +925,7 @@ impl ChatPanel {
                 if matches!(
                     self.state,
                     State::ModelSelectedWithChat {
-                        is_streaming: true,
+                        receiving_response: true,
                         ..
                     }
                 ) && item_id == messages_count - 1
@@ -919,14 +956,13 @@ fn get_chat(store: &Store) -> Option<&RefCell<Chat>> {
     store.chats.get_current_chat()
 }
 
-fn get_initial_letter(word: &str) -> Option<char> {
-    word.chars().next()
-}
-
 fn get_model_initial_letter(store: &Store) -> Option<char> {
     let chat = get_chat(store)?;
-    let initial_letter = store.get_last_used_file_initial_letter(chat.borrow().id)?;
-    Some(initial_letter.to_ascii_uppercase())
+    let initial_letter = store
+        .get_chat_entity_name(chat.borrow().id)
+        .map(|name| name.chars().next())?;
+
+    initial_letter.map(|letter| letter.to_ascii_uppercase())
 }
 
 fn get_chat_messages(store: &Store) -> Option<Ref<Vec<ChatMessage>>> {

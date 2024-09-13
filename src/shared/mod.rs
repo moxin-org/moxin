@@ -1,6 +1,7 @@
 use makepad_widgets::Cx;
 
 pub mod actions;
+pub mod computed_list;
 pub mod desktop_buttons;
 pub mod download_notification_popup;
 pub mod external_link;
@@ -13,6 +14,7 @@ pub mod utils;
 pub mod widgets;
 
 pub fn live_design(cx: &mut Cx) {
+    computed_list::live_design(cx);
     styles::live_design(cx);
     resource_imports::live_design(cx);
     widgets::live_design(cx);

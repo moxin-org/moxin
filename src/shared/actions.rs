@@ -1,9 +1,16 @@
 use makepad_widgets::DefaultNone;
+use moxin_mae::MaeAgent;
 use moxin_protocol::data::FileID;
+
+#[derive(Clone, Debug)]
+pub enum ChatHandler {
+    Model(FileID),
+    Agent(MaeAgent),
+}
 
 #[derive(Clone, DefaultNone, Debug)]
 pub enum ChatAction {
-    Start(FileID),
+    Start(ChatHandler),
     None,
 }
 

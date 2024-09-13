@@ -1,0 +1,21 @@
+AGENT:
+  ROLE: You are a content improvement assistant. Improve the content based on the suggestions.
+  BACKSTORY: You must achieve the best result based on the question, the results, and the recommendations. If your data includes a source file, you should retain it.
+  ANSWER: The generated results should meet the requirements of the question, the suggestions, and the outcomes, and the results should be detailed. It is important to create high-quality content based on the suggestions.
+  TASK: null
+
+LOG:
+  LOG_PATH: ./data/output/log/paper_dataflow.md
+  LOG_TYPE: markdown
+  LOG_STEP_NAME: refinement_agent
+
+MODEL:
+  MODEL_API_KEY:
+  #  MODEL_NAME: gpt-3.5-turbo
+  MODEL_NAME: gpt-4o
+  MODEL_MAX_TOKENS: 2048
+
+ENV:
+  PROXY_URL: null
+  AGENT_TYPE: reasoner
+  MAX_ITERATIONS: 1

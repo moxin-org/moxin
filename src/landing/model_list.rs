@@ -1,6 +1,9 @@
+use crate::chat::agent_button::AgentButtonWidgetRefExt;
 use crate::data::store::{Store, StoreAction};
 use crate::landing::search_loading::SearchLoadingWidgetExt;
 use makepad_widgets::*;
+use moxin_mae::{MaeAgent, MaeBackend};
+use moxin_protocol::data::Model;
 
 live_design! {
     import makepad_widgets::base::*;
@@ -9,6 +12,51 @@ live_design! {
     import crate::shared::styles::*;
     import crate::landing::model_card::ModelCard;
     import crate::landing::search_loading::SearchLoading;
+    import crate::chat::agent_button::AgentButton;
+
+    AgentCard = <RoundedView> {
+        width: Fill,
+        height: 100,
+        show_bg: false,
+        draw_bg: {
+            radius: 5,
+            color: #F9FAFB,
+        }
+        button = <AgentButton> {
+            width: Fill,
+            height: Fill,
+            padding: {left: 15, right: 15},
+            spacing: 15,
+            create_new_chat: true,
+
+            draw_bg: {
+                radius: 5,
+            }
+            agent_avatar = {
+                image = {
+                    width: 64,
+                    height: 64,
+                }
+            }
+            text_layout = {
+                height: 65,
+                flow: Down,
+                caption = {
+                    draw_text: {
+                        text_style: <BOLD_FONT>{font_size: 11},
+                    }
+                }
+                description = {
+                    label = {
+                        draw_text: {
+                            wrap: Word,
+                            color: #1D2939,
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     ModelList = {{ModelList}} {
         width: Fill,
@@ -27,6 +75,23 @@ live_design! {
                 // "capture" the events, so we don't want to handle them here.
                 capture_overload: false,
 
+                AgentRow = <View> {
+                    width: Fill,
+                    height: Fit,
+                    flow: Right,
+                    spacing: 15,
+
+                    first = <AgentCard> {}
+                    second = <AgentCard> {}
+                    third = <AgentCard> {}
+                }
+                Header = <Label> {
+                    margin: {bottom: 20, top: 35}
+                    draw_text:{
+                        text_style: <BOLD_FONT>{font_size: 16},
+                        color: #000
+                    }
+                }
                 Model = <ModelCard> {
                     margin: {bottom: 30},
                 }
@@ -87,20 +152,85 @@ impl Widget for ModelList {
 
     fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, walk: Walk) -> DrawStep {
         let store = scope.data.get::<Store>().unwrap();
-        let models = &store.search.models;
-        let models_count = models.len();
+        let agents = MaeBackend::available_agents();
+
+        enum Item<'a> {
+            AgentRow {
+                agents: &'a [MaeAgent],
+                margin_bottom: f32,
+            },
+            Header(&'static str),
+            Model(&'a Model),
+        }
+
+        let mut items = Vec::new();
+
+        if store.search.keyword.is_none() {
+            items.push(Item::Header("Featured Agents"));
+            items.extend(agents.chunks(3).map(|chunk| Item::AgentRow {
+                agents: chunk,
+                margin_bottom: 15.0,
+            }));
+            if let Some(Item::AgentRow { margin_bottom, .. }) = items.last_mut() {
+                *margin_bottom = 0.0;
+            }
+            items.push(Item::Header("Models"));
+        }
+
+        items.extend(store.search.models.iter().map(Item::Model));
 
         while let Some(view_item) = self.view.draw_walk(cx, &mut Scope::empty(), walk).step() {
             if let Some(mut list) = view_item.as_portal_list().borrow_mut() {
-                list.set_item_range(cx, 0, models_count);
+                list.set_item_range(cx, 0, items.len());
                 while let Some(item_id) = list.next_visible_item(cx) {
-                    let item = list.item(cx, item_id, live_id!(Model)).unwrap();
+                    if item_id < items.len() {
+                        match items[item_id] {
+                            Item::Header(text) => {
+                                let item = list.item(cx, item_id, live_id!(Header)).unwrap();
+                                item.set_text(text);
+                                item.draw_all(cx, &mut Scope::empty());
+                            }
+                            Item::AgentRow {
+                                agents,
+                                margin_bottom,
+                            } => {
+                                let row = list.item(cx, item_id, live_id!(AgentRow)).unwrap();
 
-                    if item_id < models_count {
-                        let model = &models[item_id];
-                        let mut model_with_download_info =
-                            store.add_download_info_to_model(model);
-                        item.draw_all(cx, &mut Scope::with_data(&mut model_with_download_info));
+                                row.apply_over(
+                                    cx,
+                                    live! {
+                                        margin: {bottom: (margin_bottom)},
+                                    },
+                                );
+
+                                [id!(first), id!(second), id!(third)]
+                                    .iter()
+                                    .enumerate()
+                                    .for_each(|(i, id)| {
+                                        if let Some(agent) = agents.get(i) {
+                                            let cell = row.view(*id);
+                                            cell.apply_over(
+                                                cx,
+                                                live! {
+                                                    show_bg: true,
+                                                },
+                                            );
+                                            cell.agent_button(id!(button)).set_agent(agent, true);
+                                        }
+                                    });
+
+                                row.draw_all(cx, &mut Scope::empty());
+                            }
+                            Item::Model(model) => {
+                                let item = list.item(cx, item_id, live_id!(Model)).unwrap();
+                                let mut model_with_download_info =
+                                    store.add_download_info_to_model(model);
+                                item.draw_all(
+                                    cx,
+                                    &mut Scope::with_data(&mut model_with_download_info),
+                                );
+                            }
+                        }
                     }
                 }
             }

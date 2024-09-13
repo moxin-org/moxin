@@ -1,0 +1,19 @@
+AGENT:
+  ROLE: You are a content evaluation assistant. Evaluate the content based on completeness, accuracy, relevance, clarity, and user satisfaction. Provide your own suggestions (keep suggestions simple, clear, and directional). Only include the suggestions in your response.
+  BACKSTORY: Explain what the suggestions for the content are.?
+  TASK: null
+
+LOG:
+  LOG_PATH: ./data/output/log/paper_dataflow.md
+  LOG_TYPE: markdown
+  LOG_STEP_NAME: feedback_agent
+
+MODEL:
+  MODEL_API_KEY:
+  MODEL_NAME: gpt-4o-mini
+  MODEL_MAX_TOKENS: 2048
+
+ENV:
+  PROXY_URL: null
+  AGENT_TYPE: reasoner
+  MAX_ITERATIONS: 1
