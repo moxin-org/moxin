@@ -73,13 +73,6 @@ impl Widget for ChatHistory {
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
         self.deref.handle_event(cx, event, scope);
         self.widget_match_event(cx, event, scope);
-
-        // TODO This is a hack to redraw the chat history and reflect the
-        // name change on the first message sent.
-        // Maybe we should send and receive an action here?
-        if let Event::Signal = event {
-            self.redraw(cx);
-        }
     }
 
     fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, walk: Walk) -> DrawStep {
@@ -125,11 +118,7 @@ impl WidgetMatchEvent for ChatHistory {
 
             // Make sure text input is focused and other necessary setup happens.
             let widget_uid = self.widget_uid();
-            cx.widget_action(
-                widget_uid,
-                &scope.path,
-                ChatHistoryCardAction::ChatSelected,
-            );
+            cx.widget_action(widget_uid, &scope.path, ChatHistoryCardAction::ChatSelected);
 
             self.redraw(cx);
         }
