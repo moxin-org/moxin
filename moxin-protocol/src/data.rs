@@ -19,6 +19,7 @@ pub struct File {
     pub tags: Vec<String>,
     #[serde(default)]
     pub featured: bool,
+    pub context_size: u64,
 }
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]

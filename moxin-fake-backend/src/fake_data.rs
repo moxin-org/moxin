@@ -12,6 +12,7 @@ pub fn get_models() -> Vec<Model> {
             downloaded_path: None,
             tags: vec![],
             featured: false,
+            context_size: 2048,
         },
         File {
             id: "2".to_string(),
@@ -22,6 +23,7 @@ pub fn get_models() -> Vec<Model> {
             downloaded_path: None,
             tags: vec![],
             featured: false,
+            context_size: 2048,
         },
         File {
             id: "3".to_string(),
@@ -32,6 +34,7 @@ pub fn get_models() -> Vec<Model> {
             downloaded_path: None,
             tags: vec![],
             featured: false,
+            context_size: 2048,
         },
         File {
             id: "4".to_string(),
@@ -42,6 +45,7 @@ pub fn get_models() -> Vec<Model> {
             downloaded_path: None,
             tags: vec![],
             featured: false,
+            context_size: 2048,
         },
         File {
             id: "5".to_string(),
@@ -52,6 +56,7 @@ pub fn get_models() -> Vec<Model> {
             downloaded_path: None,
             tags: vec![],
             featured: false,
+            context_size: 2048,
         },
         File {
             id: "6".to_string(),
@@ -62,6 +67,7 @@ pub fn get_models() -> Vec<Model> {
             downloaded_path: Some("/home/user/.moxin/stablelm-zephyr-3b.Q4_K_S.gguf".to_string()),
             tags: vec!["Small & Fast".to_string()],
             featured: true,
+            context_size: 2048,
         },
         File {
             id: "7".to_string(),
@@ -72,6 +78,7 @@ pub fn get_models() -> Vec<Model> {
             downloaded_path: None,
             tags: vec!["Less Compressed".to_string(), "Might be slower".to_string()],
             featured: true,
+            context_size: 2048,
         },
     ];
 
@@ -85,6 +92,7 @@ pub fn get_models() -> Vec<Model> {
             downloaded_path: None,
             tags: vec!["Small & Fast".to_string()],
             featured: true,
+            context_size: 2048,
         },
         File {
             id: "9".to_string(),
@@ -95,6 +103,7 @@ pub fn get_models() -> Vec<Model> {
             downloaded_path: Some("/home/user/.moxin/nexusraven-v2-13b.Q6_K.gguf".to_string()),
             tags: vec!["Less Compressed".to_string(), "Might be slower".to_string()],
             featured: true,
+            context_size: 2048,
         },
     ];
 
@@ -108,6 +117,7 @@ pub fn get_models() -> Vec<Model> {
             downloaded_path: Some("/home/user/.moxin/nexusraven-v2-13b.Q4_K_S.gguf".to_string()),
             tags: vec!["Small & Fast".to_string()],
             featured: true,
+            context_size: 2048,
         },
         File {
             id: "11".to_string(),
@@ -118,6 +128,7 @@ pub fn get_models() -> Vec<Model> {
             downloaded_path: None,
             tags: vec!["Less Compressed".to_string(), "Might be slower".to_string()],
             featured: true,
+            context_size: 2048,
         },
     ];
 
@@ -131,6 +142,7 @@ pub fn get_models() -> Vec<Model> {
             downloaded_path: None,
             tags: vec!["Less Compressed".to_string(), "Might be slower".to_string()],
             featured: true,
+            context_size: 2048,
         },
         File {
             id: "TheBloke/Llama-2-7B-Chat-GGUF#llama-2-7b-chat.Q2_K.gguf".to_string(),
@@ -141,6 +153,7 @@ pub fn get_models() -> Vec<Model> {
             downloaded_path: None,
             tags: vec!["Less Compressed".to_string(), "Might be slower".to_string()],
             featured: true,
+            context_size: 2048,
         },
     ];
 

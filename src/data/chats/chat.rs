@@ -56,10 +56,26 @@ struct ChatData {
     accessed_at: chrono::DateTime<chrono::Utc>,
 }
 
+#[derive(Debug, Copy, Clone, Default)]
+pub enum ContextWindow {
+    #[default]
+    Max,
+    Custom(u32)
+}
+
+impl Into<Option<u32>> for ContextWindow {
+    fn into(self) -> Option<u32> {
+        match self {
+            ContextWindow::Max => None,
+            ContextWindow::Custom(value) => Some(value),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct ChatInferenceParams {
     pub frequency_penalty: f32,
-    pub max_tokens: u32,
+    pub max_tokens: ContextWindow,
     pub presence_penalty: f32,
     pub temperature: f32,
     pub top_p: f32,
@@ -71,7 +87,7 @@ impl Default for ChatInferenceParams {
     fn default() -> Self {
         Self {
             frequency_penalty: 0.0,
-            max_tokens: 2048,
+            max_tokens: ContextWindow::default(),
             presence_penalty: 0.0,
             temperature: 1.0,
             top_p: 1.0,
@@ -259,7 +275,7 @@ impl Chat {
                 frequency_penalty: Some(ip.frequency_penalty),
                 logprobs: None,
                 top_logprobs: None,
-                max_tokens: Some(ip.max_tokens),
+                max_tokens: ip.max_tokens.into(),
                 presence_penalty: Some(ip.presence_penalty),
                 seed: None,
                 stop: Some(

@@ -1,7 +1,10 @@
 use makepad_widgets::*;
 
 use crate::{
-    data::{chats::chat::ChatID, store::Store},
+    data::{
+        chats::chat::{Chat, ChatID, ContextWindow},
+        store::Store,
+    },
     shared::tooltip::TooltipWidgetExt,
 };
 
@@ -262,10 +265,17 @@ impl Widget for ChatParams {
 
             temperature.set_value(ip.temperature.into());
             top_p.set_value(ip.top_p.into());
-            max_tokens.set_value(ip.max_tokens.into());
             frequency_penalty.set_value(ip.frequency_penalty.into());
             presence_penalty.set_value(ip.presence_penalty.into());
             stop.set_text(&ip.stop);
+
+            let max = max_context_window(&chat, store);
+            max_tokens.set_range(cx, 100.0, max);
+
+            match ip.max_tokens {
+                ContextWindow::Max => max_tokens.set_value(max),
+                ContextWindow::Custom(value) => max_tokens.set_value(value.into()),
+            }
 
             let system_prompt_value = chat.system_prompt.clone().unwrap_or_default();
             system_prompt.set_text(&system_prompt_value);
@@ -323,7 +333,7 @@ impl WidgetMatchEvent for ChatParams {
             }
 
             if let Some(value) = self.slider(id!(max_tokens)).slided(&actions) {
-                ip.max_tokens = value as u32;
+                ip.max_tokens = ContextWindow::Custom(value as u32);
             }
 
             if let Some(value) = self.slider(id!(frequency_penalty)).slided(&actions) {
@@ -453,4 +463,14 @@ impl ChatParams {
             tooltip.hide(cx);
         }
     }
+}
+
+fn max_context_window(chat: &Chat, store: &Store) -> f64 {
+    let file = chat
+        .last_used_file_id
+        .as_ref()
+        .and_then(|file_id| store.downloads.get_file(&file_id).cloned())
+        .or_else(|| store.chats.loaded_model.as_ref().cloned());
+
+    file.map_or(2048.0, |f| f.context_size as f64)
 }

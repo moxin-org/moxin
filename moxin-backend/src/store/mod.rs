@@ -58,6 +58,7 @@ pub fn get_all_download_file(
                 downloaded_path,
                 tags: file.tags,
                 featured: false,
+                context_size: file.context_size,
             },
             model,
             downloaded_at: file.downloaded_at,
@@ -90,6 +91,7 @@ pub fn get_all_pending_downloads(
             downloaded_path: None,
             tags: file.tags.clone(),
             featured: file.featured,
+            context_size: file.context_size,
         };
 
         let model = if let Some(model) = models.get(&file.model_id) {

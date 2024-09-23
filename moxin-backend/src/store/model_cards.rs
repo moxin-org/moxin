@@ -397,6 +397,7 @@ impl ModelCard {
 
         fn to_file(
             model_id: &str,
+            context_size: &u64,
             remote_files: &[RemoteFile],
             save_files: &HashMap<Arc<String>, super::download_files::DownloadedFile>,
         ) -> rusqlite::Result<Vec<moxin_protocol::data::File>> {
@@ -422,6 +423,7 @@ impl ModelCard {
                     downloaded_path,
                     tags: remote_f.tags.clone(),
                     featured: false,
+                    context_size: *context_size
                 };
 
                 files.push(file);
@@ -441,7 +443,7 @@ impl ModelCard {
                 requires: remote_m.requires.clone(),
                 architecture: remote_m.architecture.clone(),
                 released_at: remote_m.released_at.clone(),
-                files: to_file(&remote_m.id, &remote_m.files, &files)?,
+                files: to_file(&remote_m.id, &remote_m.context_size, &remote_m.files, &files)?,
                 author: moxin_protocol::data::Author {
                     name: remote_m.author.name.clone(),
                     url: remote_m.author.url.clone(),

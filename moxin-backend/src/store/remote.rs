@@ -269,6 +269,7 @@ impl ModelFileDownloader {
                             ),
                             tags: file.tags,
                             featured: false,
+                            context_size: file.context_size,
                         },
                         model: Model::default(),
                         downloaded_at: file.downloaded_at,
