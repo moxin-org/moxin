@@ -21,7 +21,6 @@ pub struct ChatRequestData {
     pub frequency_penalty: Option<f32>,
     pub logprobs: Option<bool>,
     pub top_logprobs: Option<u32>,
-    pub max_tokens: Option<u32>,
     pub presence_penalty: Option<f32>,
     pub seed: Option<u32>,
     pub stop: Option<Vec<String>>,

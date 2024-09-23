@@ -61,6 +61,7 @@ live_design! {
         padding: 0,
         line_spacing: (LINE_SPACING),
         paragraph_spacing: 20.0,
+        font_color: #000,
         width: Fill, height: Fit,
         font_size: 10.0,
         draw_normal: {

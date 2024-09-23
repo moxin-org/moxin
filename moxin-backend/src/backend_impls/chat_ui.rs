@@ -87,7 +87,7 @@ impl ChatBotUi {
             // Init current_req
             if !req.stream.unwrap_or_default() {
                 self.chat_completion_message = Some(Vec::with_capacity(
-                    (req.max_tokens.unwrap_or(512) * 8) as usize,
+                    (512 * 8) as usize,
                 ))
             }
             *self.current_req.get_mut() = serde_json::to_vec(&req).unwrap();

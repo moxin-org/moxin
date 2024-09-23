@@ -65,12 +65,6 @@ impl Chats {
 
             if chat.last_used_file_id != new_file_id {
                 chat.last_used_file_id = new_file_id;
-
-                // Update the defined max_tokens if it exceeds the new file's context size
-                if let ContextWindow::Custom(ref mut v) = chat.inferences_params.max_tokens {
-                    *v = (*v).min(file.context_size as u32);
-                }
-
                 chat.save();
             }
         }

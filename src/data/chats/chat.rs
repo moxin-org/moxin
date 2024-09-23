@@ -75,7 +75,6 @@ impl Into<Option<u32>> for ContextWindow {
 #[derive(Debug)]
 pub struct ChatInferenceParams {
     pub frequency_penalty: f32,
-    pub max_tokens: ContextWindow,
     pub presence_penalty: f32,
     pub temperature: f32,
     pub top_p: f32,
@@ -87,7 +86,6 @@ impl Default for ChatInferenceParams {
     fn default() -> Self {
         Self {
             frequency_penalty: 0.0,
-            max_tokens: ContextWindow::default(),
             presence_penalty: 0.0,
             temperature: 1.0,
             top_p: 1.0,
@@ -108,6 +106,7 @@ pub struct Chat {
     pub is_streaming: bool,
     pub inferences_params: ChatInferenceParams,
     pub system_prompt: Option<String>,
+    pub context_window: ContextWindow,
     pub accessed_at: chrono::DateTime<chrono::Utc>,
 
     title: String,
@@ -135,6 +134,7 @@ impl Chat {
             chats_dir,
             inferences_params: ChatInferenceParams::default(),
             system_prompt: None,
+            context_window: ContextWindow::Max,
             accessed_at: chrono::Utc::now(),
         }
     }
@@ -157,6 +157,8 @@ impl Chat {
                     chats_dir,
                     inferences_params: ChatInferenceParams::default(),
                     system_prompt: data.system_prompt,
+                    // TODO: persist this option?
+                    context_window: ContextWindow::Max,
                     accessed_at: data.accessed_at,
                 };
                 Ok(chat)
@@ -275,7 +277,6 @@ impl Chat {
                 frequency_penalty: Some(ip.frequency_penalty),
                 logprobs: None,
                 top_logprobs: None,
-                max_tokens: ip.max_tokens.into(),
                 presence_penalty: Some(ip.presence_penalty),
                 seed: None,
                 stop: Some(

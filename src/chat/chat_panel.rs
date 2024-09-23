@@ -60,6 +60,7 @@ live_design! {
                     }
                     markdown_message_container = {
                         markdown_message = {
+                            font_color: (#fff),
                             draw_normal: {
                                 color: (#fff),
                             }
