@@ -56,7 +56,7 @@ struct ChatData {
     accessed_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default, PartialEq)]
 pub enum ContextWindow {
     #[default]
     Max,
@@ -315,9 +315,10 @@ impl Chat {
 
         let store_chat_tx = self.messages_update_sender.clone();
         let wanted_file = wanted_file.clone();
+        let context_window = self.context_window;
         let command_sender = backend.command_sender.clone();
         thread::spawn(move || {
-            if let Err(err) = model_loader.load(wanted_file.id, command_sender.clone()) {
+            if let Err(err) = model_loader.load(wanted_file.id, context_window, command_sender.clone()) {
                 eprintln!("Error loading model: {}", err);
                 return;
             }
