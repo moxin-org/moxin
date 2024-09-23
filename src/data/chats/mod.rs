@@ -60,15 +60,13 @@ impl Chats {
     pub fn load_model(&mut self, file: &File) {
         self.cancel_chat_streaming();
 
-        let mut context_window = ContextWindow::default();
         if let Some(mut chat) = self.get_current_chat().map(|c| c.borrow_mut()) {
             let new_file_id = Some(file.id.clone());
 
             if chat.last_used_file_id != new_file_id {
                 chat.last_used_file_id = new_file_id;
+                chat.context_window = ContextWindow::default();
                 chat.save();
-
-                context_window = chat.context_window;
             }
         }
 
@@ -77,7 +75,7 @@ impl Chats {
         }
 
         self.model_loader
-            .load_async(file.id.clone(), context_window, self.backend.command_sender.clone());
+            .load_async(file.id.clone(), ContextWindow::default(), self.backend.command_sender.clone());
     }
 
     pub fn get_current_chat_id(&self) -> Option<ChatID> {
