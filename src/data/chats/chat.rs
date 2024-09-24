@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use makepad_widgets::SignalToUI;
+use makepad_widgets::DefaultNone;
 use moxin_backend::Backend;
 use moxin_protocol::data::{File, FileID};
 use moxin_protocol::open_ai::*;
@@ -16,10 +16,11 @@ use super::model_loader::ModelLoader;
 
 pub type ChatID = u128;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, DefaultNone)]
 pub enum ChatTokenArrivalAction {
     AppendDelta(String),
     StreamingDone,
+    None,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -87,8 +88,6 @@ pub struct Chat {
     pub id: ChatID,
     pub last_used_file_id: Option<FileID>,
     pub messages: Vec<ChatMessage>,
-    pub messages_update_sender: Sender<ChatTokenArrivalAction>,
-    pub messages_update_receiver: Receiver<ChatTokenArrivalAction>,
     pub is_streaming: bool,
     pub inferences_params: ChatInferenceParams,
     pub system_prompt: Option<String>,
